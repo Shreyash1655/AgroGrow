@@ -1,0 +1,58 @@
+{
+  "expo": {
+    "name": "AgroGROW",
+    "slug": "agrogrow",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#0d3b22"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.agrogrow.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "We need your location to show local farm weather and disease risk maps."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0d3b22"
+      },
+      "package": "com.agrogrow.app",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "AgroGROW needs your location for local weather and disease alerts."
+        }
+      ]
+    ],
+    "scheme": "agrogrow",
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "3978360e-88e9-4d76-9c2c-2e4c4f69ce7a"
+      }
+    }
+  }
+}
