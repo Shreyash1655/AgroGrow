@@ -5,8 +5,10 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useNavigation } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+
+// ✅ FIXED: Using 3 dots instead of 4
 import { FadeIn, PressScale, Pill } from '../../src/components/UI';
 import { useApp } from '../../src/store/AppContext';
 import { Colors, Fonts, Radius, Shadows } from '../../src/theme';
