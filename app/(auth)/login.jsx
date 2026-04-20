@@ -1,293 +1,423 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, StyleSheet, ScrollView,
   TouchableOpacity, KeyboardAvoidingView, Platform, Alert,
+  Animated, Easing, Dimensions, StatusBar, ActivityIndicator
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import * as Location from 'expo-location';
-import { BtnPrimary, FadeIn } from '../../src/components/UI';
-import { Colors, Fonts, Radius } from '../../src/theme';
-import { UserStore, Session } from '../../src/utils/store';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { createClient } from '@supabase/supabase-js';
+
 import { useApp } from '../../src/store/AppContext';
 
-// ── Shared auth header ────────────────────────────────────────
-function AuthHeader({ step, title }) {
+const { width } = Dimensions.get('window');
+
+// ─────────────────────────────────────────────────────
+// SUPABASE CONFIGURATION
+// ─────────────────────────────────────────────────────
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+/* ─── Shared UI: Premium Floating Header ───────────────── */
+function AuthHeader({ step, title, progress, subtitle }) {
   return (
-    <LinearGradient colors={[Colors.g1, Colors.g2]} style={styles.authHdr}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-        <Text style={{ color: 'rgba(255,255,255,.7)', fontSize: 22 }}>←</Text>
-      </TouchableOpacity>
-      <Text style={styles.authStep}>{step}</Text>
-      <Text style={styles.authTitle}>{title}</Text>
+    <LinearGradient colors={['#022C22', '#064E3B', '#10B981']} style={styles.authHdr}>
+      <SafeAreaView edges={['top']}>
+        <View style={styles.hdrRow}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backCircle}>
+            <Ionicons name="chevron-back" size={24} color="#FFF" />
+          </TouchableOpacity>
+          <View style={styles.progressContainer}>
+             {[33, 66, 100].map((val, idx) => (
+               <View key={idx} style={[styles.progressSegment, progress >= val && styles.progressSegmentActive]} />
+             ))}
+          </View>
+        </View>
+        <View style={styles.headerTextWrapper}>
+          <Text style={styles.authStep}>{step}</Text>
+          <Text style={styles.authTitle}>{title}</Text>
+          {subtitle && <Text style={styles.authSubtitle}>{subtitle}</Text>}
+        </View>
+      </SafeAreaView>
     </LinearGradient>
   );
 }
 
-// ── Field group ───────────────────────────────────────────────
-function FieldGroup({ label, children }) {
+/* ─── Shared UI: Icon Input Field ──────────────────────── */
+const IconInput = ({ icon, label, ...props }) => (
+  <View style={styles.inputGroup}>
+    <Text style={styles.label}>{label}</Text>
+    <View style={styles.inputWrapper}>
+      <Ionicons name={icon} size={20} color="#94A3B8" style={styles.inputIcon} />
+      <TextInput style={styles.input} placeholderTextColor="#94A3B8" {...props} />
+    </View>
+  </View>
+);
+
+/* ─── STEP 1: REGISTER ─────────────────────────────────── */
+export function Register() {
+  const [form, setForm] = useState({ name: '', phone: '', pass: '', lang: 'en' });
+
+  const next = async () => {
+    if (form.name.length < 2) return Alert.alert('Invalid Name', 'Please enter your full name.');
+    if (!/^\d{10}$/.test(form.phone)) return Alert.alert('Invalid Phone', '10-digit number required.');
+    if (form.pass.length < 6) return Alert.alert('Security', 'Password must be at least 6 characters.');
+    router.push({ pathname: '/(auth)/farm', params: form });
+  };
+
   return (
-    <View style={styles.fgroup}>
-      <Text style={styles.fl}>{label}</Text>
-      {children}
+    <View style={styles.main}>
+      <StatusBar barStyle="light-content" backgroundColor="#022C22" />
+      <AuthHeader step="Step 1 of 3" title="Create Account" subtitle="Join the smart farming revolution 🌱" progress={33} />
+
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : null} style={styles.floatingCardContainer}>
+        <ScrollView contentContainerStyle={styles.floatingCard} showsVerticalScrollIndicator={false}>
+          <IconInput icon="person-outline" label="Full Name" placeholder="e.g. Ramesh Kumar" onChangeText={(v) => setForm({...form, name: v})} />
+          <IconInput icon="call-outline" label="Mobile Number" placeholder="98XXXXXXXX" keyboardType="phone-pad" maxLength={10} onChangeText={(v) => setForm({...form, phone: v})} />
+          <IconInput icon="lock-closed-outline" label="Set Password" placeholder="••••••" secureTextEntry onChangeText={(v) => setForm({...form, pass: v})} />
+
+          <TouchableOpacity onPress={next} style={styles.primaryBtn} activeOpacity={0.8}>
+            <LinearGradient colors={['#10B981', '#059669']} style={styles.btnGrad}>
+               <Text style={styles.btnText}>Continue</Text>
+               <Ionicons name="arrow-forward" size={20} color="#FFF" />
+            </LinearGradient>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
 
-function Input({ value, onChangeText, placeholder, keyboardType, secureTextEntry, maxLength }) {
-  const [focused, setFocused] = useState(false);
-  return (
-    <TextInput
-      style={[styles.fi, focused && styles.fiFocused]}
-      value={value} onChangeText={onChangeText} placeholder={placeholder}
-      placeholderTextColor={Colors.g400} keyboardType={keyboardType}
-      secureTextEntry={secureTextEntry} maxLength={maxLength}
-      onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
-      fontFamily={Fonts.bold}
-    />
-  );
-}
-
-// ── Register Screen ───────────────────────────────────────────
-export function Register() {
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [pass, setPass] = useState('');
-  const [lang, setLang] = useState('en');
-  const [loading, setLoading] = useState(false);
-
-  async function next() {
-    if (name.trim().length < 2) { Alert.alert('Error', 'Enter your full name'); return; }
-    if (!/^\d{10}$/.test(phone)) { Alert.alert('Error', 'Enter a valid 10-digit phone number'); return; }
-    if (pass.length < 6) { Alert.alert('Error', 'Password must be at least 6 characters'); return; }
-    if (await UserStore.exists(phone)) { Alert.alert('Error', 'Phone already registered! Please login.'); return; }
-    router.push({ pathname: '/(auth)/farm', params: { name: name.trim(), phone, pass, lang } });
-  }
-
-  const langs = [{ v: 'en', l: '🇮🇳 English' }, { v: 'kok', l: '🌿 Konkani' }, { v: 'mr', l: '📖 Marathi' }, { v: 'hi', l: '🔤 Hindi' }];
-
-  return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: Colors.white }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <AuthHeader step="Step 1 of 3 · Create Account" title="Join AgroGROW 👋" />
-      <ScrollView contentContainerStyle={styles.authBody} showsVerticalScrollIndicator={false}>
-        <FadeIn delay={0}><FieldGroup label="Full Name"><Input value={name} onChangeText={setName} placeholder="e.g. Ramesh Naik" /></FieldGroup></FadeIn>
-        <FadeIn delay={60}><FieldGroup label="Phone Number"><Input value={phone} onChangeText={setPhone} placeholder="10-digit mobile number" keyboardType="phone-pad" maxLength={10} /></FieldGroup></FadeIn>
-        <FadeIn delay={120}><FieldGroup label="Password"><Input value={pass} onChangeText={setPass} placeholder="At least 6 characters" secureTextEntry /></FieldGroup></FadeIn>
-        <FadeIn delay={180}><FieldGroup label="Preferred Language">
-          <View style={styles.langRow}>
-            {langs.map(l => (
-              <TouchableOpacity key={l.v} style={[styles.langBtn, lang === l.v && styles.langBtnOn]} onPress={() => setLang(l.v)}>
-                <Text style={[styles.langBtnText, lang === l.v && { color: '#fff' }]}>{l.l}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </FieldGroup></FadeIn>
-        <FadeIn delay={240}><BtnPrimary label="Next: Farm Details →" onPress={next} loading={loading} /></FadeIn>
-        <TouchableOpacity onPress={() => router.replace('/(auth)/login')}>
-          <Text style={styles.switchText}>Already registered? <Text style={{ color: Colors.g2, fontFamily: Fonts.black }}>Login here</Text></Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
-  );
-}
-
-// ── Farm Screen ───────────────────────────────────────────────
-export function Farm({ route }) {
-  const params = route?.params || {};
+/* ─── STEP 2: FARM DETAILS ─────────────────────────────── */
+export function Farm() {
+  const params = useLocalSearchParams();
   const [taluka, setTaluka] = useState('Panaji');
   const [size, setSize] = useState('');
-  const [soil, setSoil] = useState('laterite');
   const [crops, setCrops] = useState([]);
 
-  const talukas = ['Lotoulim','Salcete','Panaji','Mapusa','Margao','Canacona','Ponda','Sattari','Bicholim','Quepem','Vasco da Gama','Calangute'];
-  const cropOpts = [{ v:'cashew', l:'🥜 Cashew' }, { v:'paddy', l:'🌾 Paddy' }, { v:'coconut', l:'🥥 Coconut' }, { v:'vegetable', l:'🥬 Vegetable' }];
-  const soils = [{ v:'laterite', l:'🔴 Red Laterite' }, { v:'alluvial', l:'🌊 Alluvial / Khazan' }, { v:'clay', l:'🟤 Clay' }, { v:'sandy', l:'🟡 Sandy / Coastal' }];
+  const talukas = ['Tiswadi', 'Bardez', 'Salcete', 'Ponda', 'Sattari', 'Bicholim', 'Pernem'];
+  const cropOpts = [
+    { v: 'cashew', l: 'Cashew', ico: '🥜' },
+    { v: 'paddy', l: 'Paddy', ico: '🌾' },
+    { v: 'coconut', l: 'Coconut', ico: '🥥' },
+    { v: 'mango', l: 'Mango', ico: '🥭' }
+  ];
 
-  function toggleCrop(v) { setCrops(c => c.includes(v) ? c.filter(x => x !== v) : [...c, v]); }
-
-  function next() {
-    if (!size || parseFloat(size) <= 0) { Alert.alert('Error', 'Enter your farm size in acres'); return; }
-    if (!crops.length) { Alert.alert('Error', 'Select at least one crop'); return; }
-    router.push({ pathname: '/(auth)/location', params: { ...params, taluka, farmSize: size, soil, crops: JSON.stringify(crops) } });
-  }
+  const next = () => {
+    if (!size) return Alert.alert('Missing Data', 'Please enter farm size.');
+    if (!crops.length) return Alert.alert('Selection', 'Select at least one crop.');
+    router.push({
+        pathname: '/(auth)/location',
+        params: { ...params, taluka, farmSize: size, crops: JSON.stringify(crops) }
+    });
+  };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: Colors.white }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <AuthHeader step="Step 2 of 3 · Farm Details" title="Tell us about your farm 🌾" />
-      <ScrollView contentContainerStyle={styles.authBody} showsVerticalScrollIndicator={false}>
-        <FadeIn delay={0}><FieldGroup label="Taluka / Village">
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -4 }}>
-            <View style={{ flexDirection: 'row', gap: 7, paddingHorizontal: 4 }}>
-              {talukas.map(t => (
-                <TouchableOpacity key={t} style={[styles.chipBtn, taluka === t && styles.chipBtnOn]} onPress={() => setTaluka(t)}>
-                  <Text style={[styles.chipText, taluka === t && { color: '#fff' }]}>{t}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+    <View style={styles.main}>
+      <StatusBar barStyle="light-content" backgroundColor="#022C22" />
+      <AuthHeader step="Step 2 of 3" title="Farm Details" subtitle="Help AI understand your land 🌾" progress={66} />
+
+      <View style={styles.floatingCardContainer}>
+        <ScrollView contentContainerStyle={styles.floatingCard} showsVerticalScrollIndicator={false}>
+          <Text style={styles.label}>Select Taluka</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
+            {talukas.map(t => (
+              <TouchableOpacity key={t} onPress={() => setTaluka(t)} style={[styles.chip, taluka === t && styles.chipActive]} activeOpacity={0.7}>
+                <Text style={[styles.chipTxt, taluka === t && styles.chipTxtActive]}>{t}</Text>
+              </TouchableOpacity>
+            ))}
           </ScrollView>
-        </FieldGroup></FadeIn>
-        <FadeIn delay={60}><FieldGroup label="Farm Size (acres)"><Input value={size} onChangeText={setSize} placeholder="e.g. 2.5" keyboardType="decimal-pad" /></FieldGroup></FadeIn>
-        <FadeIn delay={120}><FieldGroup label="Your Crops">
-          <View style={styles.cropGrid}>
-            {cropOpts.map(c => (
-              <TouchableOpacity key={c.v} style={[styles.cropBtn, crops.includes(c.v) && styles.cropBtnOn]} onPress={() => toggleCrop(c.v)}>
-                <Text style={[styles.cropText, crops.includes(c.v) && { color: Colors.g1 }]}>{c.l}</Text>
-              </TouchableOpacity>
-            ))}
+
+          <IconInput icon="expand-outline" label="Farm Size (Acres)" placeholder="e.g. 2.5" keyboardType="decimal-pad" onChangeText={setSize} />
+
+          <Text style={styles.label}>Primary Crops</Text>
+          <View style={styles.grid}>
+            {cropOpts.map(c => {
+              const isSelected = crops.includes(c.v);
+              return (
+                <TouchableOpacity
+                  key={c.v}
+                  activeOpacity={0.7}
+                  onPress={() => setCrops(prev => isSelected ? prev.filter(x => x !== c.v) : [...prev, c.v])}
+                  style={[styles.gridItem, isSelected && styles.gridItemActive]}
+                >
+                  {isSelected && (
+                    <View style={styles.checkBadge}>
+                      <Ionicons name="checkmark" size={14} color="#FFF" />
+                    </View>
+                  )}
+                  <Text style={{ fontSize: 32, marginBottom: 8 }}>{c.ico}</Text>
+                  <Text style={[styles.gridTxt, isSelected && styles.gridTxtActive]}>{c.l}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
-        </FieldGroup></FadeIn>
-        <FadeIn delay={180}><FieldGroup label="Soil Type">
-          <View style={{ gap: 7 }}>
-            {soils.map(s => (
-              <TouchableOpacity key={s.v} style={[styles.soilBtn, soil === s.v && styles.soilBtnOn]} onPress={() => setSoil(s.v)}>
-                <Text style={[styles.soilText, soil === s.v && { color: Colors.g1, fontFamily: Fonts.extraBold }]}>{s.l}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </FieldGroup></FadeIn>
-        <FadeIn delay={240}><BtnPrimary label="Next: Detect Location →" onPress={next} /></FadeIn>
-      </ScrollView>
-    </KeyboardAvoidingView>
-  );
-}
 
-// ── Location Screen ───────────────────────────────────────────
-export function LocationScreen({ route }) {
-  const params = route?.params || {};
-  const { login } = useApp();
-  const [state, setState] = useState('detecting'); // detecting | found | error
-  const [locData, setLocData] = useState({ lat: 15.4909, lng: 73.8278, locName: params.taluka + ', Goa' });
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') { setState('error'); return; }
-        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-        const { latitude: lat, longitude: lng } = pos.coords;
-        try {
-          const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=en`);
-          const d = await r.json();
-          const village = d.address?.village || d.address?.suburb || d.address?.town || d.address?.city || params.taluka || 'Goa';
-          setLocData({ lat, lng, locName: `${village}, Goa` });
-        } catch { setLocData({ lat, lng, locName: params.taluka + ', Goa' }); }
-        setState('found');
-      } catch { setState('error'); }
-    })();
-  }, []);
-
-  async function finish(ld) {
-    const crops = JSON.parse(params.crops || '[]');
-    const u = { name: params.name, phone: params.phone, pass: params.pass, lang: params.lang, taluka: params.taluka, farmSize: parseFloat(params.farmSize), soil: params.soil, crops, ...ld, joined: new Date().toISOString() };
-    await UserStore.set(u.phone, u);
-    await login(u);
-    router.replace('/(tabs)/home');
-  }
-
-  return (
-    <View style={{ flex: 1, backgroundColor: Colors.white }}>
-      <AuthHeader step="Step 3 of 3 · Location" title="Find your farm 📍" />
-      <View style={[styles.authBody, { alignItems: 'center', justifyContent: 'center', flex: 1 }]}>
-        {state === 'detecting' && (
-          <FadeIn style={{ alignItems: 'center', gap: 16 }}>
-            <View style={styles.locSpinner} />
-            <Text style={styles.locTitle}>Detecting your GPS location...</Text>
-            <Text style={styles.locSub}>Please allow location permission when asked</Text>
-          </FadeIn>
-        )}
-        {state === 'found' && (
-          <FadeIn style={{ width: '100%', gap: 13 }}>
-            <View style={styles.locFoundCard}>
-              <Text style={{ fontSize: 42 }}>📍</Text>
-              <Text style={styles.locName}>{locData.locName}</Text>
-              <Text style={styles.locCoords}>{locData.lat.toFixed(5)}°N, {locData.lng.toFixed(5)}°E</Text>
-            </View>
-            <BtnPrimary label="✅ Confirm & Enter App →" onPress={() => finish(locData)} />
-            <TouchableOpacity onPress={() => finish({ lat: 15.4909, lng: 73.8278, locName: params.taluka + ', Goa' })}>
-              <Text style={[styles.switchText, { textAlign: 'center' }]}>Use manual location instead</Text>
-            </TouchableOpacity>
-          </FadeIn>
-        )}
-        {state === 'error' && (
-          <FadeIn style={{ width: '100%', gap: 13, alignItems: 'center' }}>
-            <Text style={{ fontSize: 52 }}>😕</Text>
-            <Text style={styles.locTitle}>Location access denied</Text>
-            <Text style={styles.locSub}>No problem! We'll use your taluka as your location.</Text>
-            <BtnPrimary label="Continue with Manual Location →" onPress={() => finish({ lat: 15.4909, lng: 73.8278, locName: params.taluka + ', Goa' })} style={{ width: '100%' }} />
-          </FadeIn>
-        )}
+          <TouchableOpacity onPress={next} style={styles.primaryBtn} activeOpacity={0.8}>
+            <LinearGradient colors={['#10B981', '#059669']} style={styles.btnGrad}>
+               <Text style={styles.btnText}>Next: Location Sync</Text>
+               <Ionicons name="arrow-forward" size={20} color="#FFF" />
+            </LinearGradient>
+          </TouchableOpacity>
+        </ScrollView>
       </View>
     </View>
   );
 }
 
-// ── Login Screen ──────────────────────────────────────────────
-export function Login() {
+/* ─── STEP 3: LOCATION (SUPABASE REGISTER) ─────────────── */
+export function LocationScreen() {
+  const params = useLocalSearchParams();
+  const { login } = useApp();
+  const [state, setState] = useState('detecting');
+  const [dbSaving, setDbSaving] = useState(false);
+  const [locData, setLocData] = useState({ lat: 15.4909, lng: 73.8278, locName: 'Panaji, Goa' });
+
+  const portalAnim = useRef(new Animated.Value(0)).current;
+  const radarAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(radarAnim, { toValue: 1, duration: 2000, easing: Easing.out(Easing.ease), useNativeDriver: true })
+    ).start();
+    setTimeout(detectLocation, 2000);
+  }, []);
+
+  const detectLocation = async () => {
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') return setState('error');
+    let loc = await Location.getCurrentPositionAsync({});
+    setLocData({ lat: loc.coords.latitude, lng: loc.coords.longitude, locName: `${params.taluka || 'Panaji'}, Goa` });
+    setState('found');
+  };
+
+  const finish = async () => {
+    setDbSaving(true);
+
+    // ✅ FIXED: Perfectly matches your exact `farmers` table columns!
+    const userToSave = {
+      phone: params.phone,
+      name: params.name,
+      password: params.pass, // YOU MUST ADD THIS COLUMN IN SUPABASE!
+      taluka: params.taluka,
+      farm_size: parseFloat(params.farmSize) || 0,
+      crops: JSON.parse(params.crops || '[]') // Sends the array like ["cashew"]
+    };
+
+    // ✅ FIXED: Inserting into 'farmers' table
+    const { error } = await supabase.from('farmers').insert([userToSave]);
+
+    if (error) {
+      setDbSaving(false);
+      Alert.alert(
+        'Database Error',
+        `Could not save to Supabase. Ensure you added the 'password' column to your 'farmers' table.\n\nError: ${error.message}`
+      );
+      return;
+    }
+
+    Animated.timing(portalAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start(async () => {
+      await login(userToSave);
+      router.replace('/drawer/home');
+    });
+  };
+
+  const radarScale = radarAnim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 2] });
+  const radarOpacity = radarAnim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 0] });
+
+  return (
+    <View style={styles.main}>
+      <StatusBar barStyle="light-content" backgroundColor="#022C22" />
+      <AuthHeader step="Step 3 of 3" title="Precision Location 📍" subtitle="Connecting to Agri-Satellites" progress={100} />
+
+      <View style={styles.radarWrapper}>
+        {state === 'detecting' ? (
+          <View style={styles.radarContainer}>
+            <Animated.View style={[styles.radarRing, { transform: [{ scale: radarScale }], opacity: radarOpacity }]} />
+            <View style={styles.radarCenter}>
+              <Ionicons name="satellite-outline" size={32} color="#FFF" />
+            </View>
+            <Text style={styles.radarTitle}>SYNCING COORDINATES...</Text>
+          </View>
+        ) : (
+          <View style={[styles.floatingCard, { alignItems: 'center', padding: 40 }]}>
+            <View style={styles.successIconBox}>
+              <Ionicons name="location" size={45} color="#FFF" />
+            </View>
+            <Text style={styles.foundLocName}>{locData.locName}</Text>
+            <Text style={styles.foundLocCoords}>{locData.lat.toFixed(4)}° N, {locData.lng.toFixed(4)}° E</Text>
+
+            <View style={styles.dataTag}><Text style={styles.dataTagTxt}>✓ Weather Data Linked</Text></View>
+            <View style={styles.dataTag}><Text style={styles.dataTagTxt}>✓ Soil Profile Linked</Text></View>
+
+            <TouchableOpacity onPress={finish} disabled={dbSaving} style={[styles.primaryBtn, { width: '100%', marginTop: 30 }]} activeOpacity={0.8}>
+              <LinearGradient colors={['#10B981', '#059669']} style={styles.btnGrad}>
+                {dbSaving ? <ActivityIndicator color="#FFF" /> : (
+                  <>
+                    <Text style={styles.btnText}>ENTER DASHBOARD</Text>
+                    <Ionicons name="planet" size={20} color="#FFF" />
+                  </>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: '#FFF', opacity: portalAnim }]} />
+    </View>
+  );
+}
+
+/* ─── LOGIN SCREEN (SUPABASE AUTH) ─────────────────────── */
+export default function Login() {
   const { login } = useApp();
   const [phone, setPhone] = useState('');
   const [pass, setPass] = useState('');
   const [loading, setLoading] = useState(false);
+  const loginAnim = useRef(new Animated.Value(0)).current;
 
-  async function doLogin() {
-    if (!/^\d{10}$/.test(phone)) { Alert.alert('Error', 'Enter your 10-digit phone number'); return; }
+  const doLogin = async () => {
+    if (!phone || !pass) return Alert.alert('Error', 'Please enter both phone and password.');
+
     setLoading(true);
-    const u = await UserStore.get(phone);
+
+    // ✅ FIXED: Looking up the user in your 'farmers' table
+    const { data, error } = await supabase
+      .from('farmers')
+      .select('*')
+      .eq('phone', phone);
+
     setLoading(false);
-    if (!u) { Alert.alert('Error', 'No account found. Please register first.'); return; }
-    if (u.pass !== pass) { Alert.alert('Error', 'Wrong password. Try again.'); return; }
-    await login(u);
-    router.replace('/(tabs)/home');
-  }
+
+    if (error) {
+      return Alert.alert('Database Error', error.message);
+    }
+
+    if (!data || data.length === 0) {
+      return Alert.alert('Error', 'Account not found. Please Register first.');
+    }
+
+    const dbUser = data[0];
+
+    // ✅ FIXED: Checks the new password column
+    if (dbUser.password !== pass) {
+      return Alert.alert('Error', 'Invalid password. Please try again.');
+    }
+
+    Animated.timing(loginAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start(async () => {
+        await login(dbUser);
+        router.replace('/drawer/home');
+    });
+  };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: Colors.white }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <AuthHeader step="Welcome back" title="Login to AgroGROW 🌱" />
-      <ScrollView contentContainerStyle={styles.authBody} showsVerticalScrollIndicator={false}>
-        <FadeIn delay={0}><View style={styles.infoBanner}><Text>ℹ️ Your account is saved on this device.</Text></View></FadeIn>
-        <FadeIn delay={80}><FieldGroup label="Phone Number"><Input value={phone} onChangeText={setPhone} placeholder="10-digit number" keyboardType="phone-pad" maxLength={10} /></FieldGroup></FadeIn>
-        <FadeIn delay={160}><FieldGroup label="Password"><Input value={pass} onChangeText={setPass} placeholder="Your password" secureTextEntry /></FieldGroup></FadeIn>
-        <FadeIn delay={240}><BtnPrimary label="Login →" onPress={doLogin} loading={loading} /></FadeIn>
-        <TouchableOpacity onPress={() => router.replace('/(auth)/register')}>
-          <Text style={styles.switchText}>New here? <Text style={{ color: Colors.g2, fontFamily: Fonts.black }}>Create an account</Text></Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    <View style={styles.main}>
+      <StatusBar barStyle="light-content" backgroundColor="#022C22" />
+
+      <LinearGradient colors={['#022C22', '#064E3B', '#10B981']} style={[styles.authHdr, { paddingBottom: 60 }]}>
+        <SafeAreaView edges={['top']}>
+          <View style={styles.hdrRow}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backCircle}>
+              <Ionicons name="chevron-back" size={24} color="#FFF" />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.headerTextWrapper}>
+            <View style={styles.logoCircle}>
+              <Ionicons name="leaf" size={36} color="#10B981" />
+            </View>
+            <Text style={[styles.authTitle, { fontSize: 32 }]}>Welcome Back</Text>
+            <Text style={styles.authSubtitle}>Login to your smart farm dashboard</Text>
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
+
+      <View style={styles.floatingCardContainer}>
+        <View style={styles.floatingCard}>
+          <IconInput icon="call-outline" label="Mobile Number" placeholder="98XXXXXXXX" keyboardType="phone-pad" onChangeText={setPhone} />
+          <IconInput icon="lock-closed-outline" label="Password" placeholder="••••••" secureTextEntry onChangeText={setPass} />
+
+          <TouchableOpacity onPress={doLogin} disabled={loading} style={[styles.primaryBtn, { marginTop: 30 }]} activeOpacity={0.8}>
+            <LinearGradient colors={['#064E3B', '#10B981']} style={styles.btnGrad}>
+               {loading ? <ActivityIndicator color="#FFF" /> : (
+                 <>
+                   <Text style={styles.btnText}>Login Now</Text>
+                   <Ionicons name="log-in-outline" size={22} color="#FFF" />
+                 </>
+               )}
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <View style={styles.footerRow}>
+            <Text style={styles.footerText}>Don't have an account? </Text>
+            <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
+              <Text style={styles.footerLink}>Register Here</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: '#FFF', opacity: loginAnim }]} />
+    </View>
   );
 }
 
+/* ─── PREMIUM STYLES ───────────────────────────────────── */
 const styles = StyleSheet.create({
-  authHdr: { paddingTop: 60, paddingBottom: 24, paddingHorizontal: 22 },
-  backBtn: { marginBottom: 8, alignSelf: 'flex-start' },
-  authStep: { fontFamily: Fonts.bold, fontSize: 12, color: 'rgba(255,255,255,.55)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 4 },
-  authTitle: { fontFamily: Fonts.black, fontSize: 22, color: '#fff', lineHeight: 28 },
-  authBody: { padding: 22, gap: 16, backgroundColor: Colors.white },
-  fgroup: { gap: 6 },
-  fl: { fontFamily: Fonts.extraBold, fontSize: 11, color: Colors.g500, textTransform: 'uppercase', letterSpacing: 0.7 },
-  fi: { borderWidth: 2, borderColor: Colors.g200, borderRadius: Radius.r12, padding: 13, paddingHorizontal: 16, fontSize: 14, fontFamily: Fonts.bold, color: Colors.g900, backgroundColor: Colors.white },
-  fiFocused: { borderColor: Colors.g3 },
-  langRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  langBtn: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: Radius.r99, borderWidth: 2, borderColor: Colors.g200 },
-  langBtnOn: { backgroundColor: Colors.g1, borderColor: Colors.g1 },
-  langBtnText: { fontFamily: Fonts.extraBold, fontSize: 12, color: Colors.g500 },
-  chipBtn: { paddingVertical: 7, paddingHorizontal: 13, borderRadius: Radius.r99, borderWidth: 2, borderColor: Colors.g200, backgroundColor: Colors.white },
-  chipBtnOn: { backgroundColor: Colors.g1, borderColor: Colors.g1 },
-  chipText: { fontFamily: Fonts.extraBold, fontSize: 12, color: Colors.g500 },
-  cropGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  cropBtn: { padding: 12, borderRadius: Radius.r12, borderWidth: 2, borderColor: Colors.g200, minWidth: '47%' },
-  cropBtnOn: { borderColor: Colors.g3, backgroundColor: Colors.gp },
-  cropText: { fontFamily: Fonts.bold, fontSize: 14, color: Colors.g500 },
-  soilBtn: { padding: 12, borderRadius: Radius.r12, borderWidth: 2, borderColor: Colors.g200, backgroundColor: Colors.white },
-  soilBtnOn: { borderColor: Colors.g3, backgroundColor: Colors.gp },
-  soilText: { fontFamily: Fonts.bold, fontSize: 14, color: Colors.g500 },
-  switchText: { fontFamily: Fonts.bold, fontSize: 13, color: Colors.g400, textAlign: 'center', marginTop: 4 },
-  infoBanner: { backgroundColor: Colors.gb, borderRadius: Radius.r12, padding: 12, flexDirection: 'row', gap: 8 },
-  locSpinner: { width: 64, height: 64, borderRadius: 32, borderWidth: 5, borderColor: Colors.gp, borderTopColor: Colors.g3 },
-  locTitle: { fontFamily: Fonts.extraBold, fontSize: 16, color: Colors.g700, textAlign: 'center' },
-  locSub: { fontFamily: Fonts.medium, fontSize: 13, color: Colors.g400, textAlign: 'center', lineHeight: 20 },
-  locFoundCard: { backgroundColor: Colors.gb, borderRadius: Radius.r16, padding: 20, alignItems: 'center', borderWidth: 2, borderColor: Colors.g5 },
-  locName: { fontFamily: Fonts.black, fontSize: 17, color: Colors.g1, marginTop: 8 },
-  locCoords: { fontFamily: Fonts.medium, fontSize: 12, color: Colors.g500, marginTop: 4 },
-});
+  main: { flex: 1, backgroundColor: '#F4F7F6' },
 
-export default Login;
+  authHdr: { paddingHorizontal: 25, paddingBottom: 50, borderBottomLeftRadius: 40, borderBottomRightRadius: 40, elevation: 10, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 15 },
+  hdrRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, marginBottom: 15 },
+  backCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  progressContainer: { flexDirection: 'row', gap: 6 },
+  progressSegment: { height: 4, width: 30, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 2 },
+  progressSegmentActive: { backgroundColor: '#FFF' },
+  headerTextWrapper: { marginTop: 10 },
+  authStep: { fontSize: 12, fontWeight: '800', color: '#4ADE80', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 5 },
+  authTitle: { fontSize: 32, fontWeight: '900', color: '#FFF', letterSpacing: -0.5 },
+  authSubtitle: { fontSize: 15, color: 'rgba(255,255,255,0.8)', fontWeight: '500', marginTop: 5 },
+  logoCircle: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center', marginBottom: 15, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 10 },
+
+  floatingCardContainer: { flex: 1, marginTop: -35, paddingHorizontal: 20 },
+  floatingCard: { backgroundColor: '#FFF', borderRadius: 28, padding: 25, paddingTop: 30, elevation: 8, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 15, shadowOffset: { width: 0, height: 5 }, marginBottom: 30 },
+
+  inputGroup: { marginBottom: 22 },
+  label: { fontSize: 13, fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: 8, letterSpacing: 0.5 },
+  inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 16, height: 60 },
+  inputIcon: { marginRight: 12 },
+  input: { flex: 1, fontSize: 16, color: '#1E293B', fontWeight: '600' },
+
+  primaryBtn: { height: 60, borderRadius: 18, overflow: 'hidden', marginTop: 10, elevation: 4, shadowColor: '#10B981', shadowOpacity: 0.4, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
+  btnGrad: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  btnText: { color: '#FFF', fontSize: 17, fontWeight: '800', letterSpacing: 0.5 },
+
+  chipScroll: { marginBottom: 25 },
+  chip: { paddingHorizontal: 20, paddingVertical: 12, borderRadius: 25, backgroundColor: '#F8FAFC', marginRight: 12, borderWidth: 1, borderColor: '#E2E8F0' },
+  chipActive: { backgroundColor: '#064E3B', borderColor: '#064E3B', elevation: 3, shadowColor: '#064E3B', shadowOpacity: 0.3, shadowRadius: 5 },
+  chipTxt: { fontSize: 15, fontWeight: '700', color: '#64748B' },
+  chipTxtActive: { color: '#FFF' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 15, marginBottom: 25 },
+  gridItem: { width: (width - 105) / 2, backgroundColor: '#F8FAFC', padding: 20, borderRadius: 20, alignItems: 'center', borderWidth: 2, borderColor: '#E2E8F0', position: 'relative' },
+  gridItemActive: { borderColor: '#10B981', backgroundColor: '#ECFDF5' },
+  gridTxt: { marginTop: 5, fontWeight: '800', color: '#64748B', fontSize: 15 },
+  gridTxtActive: { color: '#064E3B' },
+  checkBadge: { position: 'absolute', top: 10, right: 10, width: 22, height: 22, borderRadius: 11, backgroundColor: '#10B981', alignItems: 'center', justifyContent: 'center' },
+
+  radarWrapper: { flex: 1, justifyContent: 'center', paddingHorizontal: 20, marginTop: -35 },
+  radarContainer: { alignItems: 'center', justifyContent: 'center', height: 300 },
+  radarRing: { position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: '#10B981' },
+  radarCenter: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#064E3B', alignItems: 'center', justifyContent: 'center', elevation: 10, shadowColor: '#064E3B', shadowOpacity: 0.5, shadowRadius: 20 },
+  radarTitle: { marginTop: 40, fontSize: 13, fontWeight: '900', color: '#94A3B8', letterSpacing: 2 },
+
+  successIconBox: { width: 90, height: 90, borderRadius: 45, backgroundColor: '#10B981', alignItems: 'center', justifyContent: 'center', marginBottom: 20, elevation: 10, shadowColor: '#10B981', shadowOpacity: 0.4, shadowRadius: 15 },
+  foundLocName: { fontSize: 24, fontWeight: '900', color: '#1E293B', textAlign: 'center' },
+  foundLocCoords: { fontSize: 14, color: '#94A3B8', marginTop: 5, fontWeight: '700', marginBottom: 25 },
+  dataTag: { backgroundColor: '#F0FDF4', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 12, marginBottom: 10, width: '100%' },
+  dataTagTxt: { color: '#15803D', fontWeight: '700', fontSize: 14 },
+
+  footerRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 30 },
+  footerText: { color: '#64748B', fontSize: 15, fontWeight: '600' },
+  footerLink: { color: '#059669', fontSize: 15, fontWeight: '800' }
+});

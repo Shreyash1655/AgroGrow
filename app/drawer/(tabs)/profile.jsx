@@ -1,18 +1,19 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, StatusBar, Dimensions
+  Alert, StatusBar, Dimensions, Modal, Pressable
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
-import { useApp } from '../../src/store/AppContext'; // ✅ Correct
-/* ─── Premium Setting Row Component ────────────────────── */
+import { useApp } from '../../../src/store/AppContext';
+
 function SettingRow({ name, label, sublabel, right, onPress, danger }) {
   return (
-    <TouchableOpacity style={styles.settingRow} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity style={styles.settingRow} onPress={onPress} activeOpacity={0.7} disabled={!onPress && !right}>
       <View style={[styles.settingIcon, danger && { backgroundColor: '#FEE2E2' }]}>
         <Ionicons name={name} size={20} color={danger ? '#EF4444' : '#10B981'} />
       </View>
@@ -27,16 +28,31 @@ function SettingRow({ name, label, sublabel, right, onPress, danger }) {
 
 export default function ProfileScreen() {
   const { user, logout } = useApp();
+  const { t, i18n } = useTranslation();
   const [notifOn, setNotifOn] = useState(true);
+  const [langModalVisible, setLangModalVisible] = useState(false);
 
   const cropsCount = (user?.crops || []).length;
   const initials = user?.name?.[0]?.toUpperCase() || 'F';
 
+  const languageNames = {
+    en: 'English',
+    hi: 'हिंदी (Hindi)',
+    mr: 'मराठी (Marathi)',
+    kok: 'कोंकणी (Konkani)'
+  };
+  const currentLangName = languageNames[i18n.language] || 'English';
+
   const handleLogout = () => {
-    Alert.alert('Sign Out', 'Are you sure you want to log out of AgroGROW?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Logout', style: 'destructive', onPress: async () => { await logout(); router.replace('/onboard'); } },
+    Alert.alert(t('profile.signOut'), t('profile.signOutConfirm'), [
+      { text: t('profile.cancel'), style: 'cancel' },
+      { text: t('profile.signOut'), style: 'destructive', onPress: async () => { await logout(); router.replace('/onboard'); } },
     ]);
+  };
+
+  const changeLanguage = async (lng) => {
+    await i18n.changeLanguage(lng);
+    setLangModalVisible(false);
   };
 
   return (
@@ -44,7 +60,7 @@ export default function ProfileScreen() {
       <StatusBar barStyle="light-content" />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
 
-        {/* IMMERSIVE HERO */}
+        {/* HERO */}
         <LinearGradient colors={['#064E3B', '#10B981']} style={styles.hero}>
           <SafeAreaView edges={['top']}>
             <View style={styles.heroContent}>
@@ -54,7 +70,7 @@ export default function ProfileScreen() {
                 </View>
               </View>
               <View style={{ flex: 1, marginLeft: 15 }}>
-                <Text style={styles.heroName}>{user?.name || 'Farmer'}</Text>
+                <Text style={styles.heroName}>{user?.name || t('profile.farmer')}</Text>
                 <View style={styles.locationBadge}>
                   <Ionicons name="location" size={12} color="rgba(255,255,255,0.8)" />
                   <Text style={styles.locationText}>{user?.taluka || 'Goa'}, India</Text>
@@ -65,44 +81,44 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* QUICK STATS BENTO */}
+            {/* STATS */}
             <View style={styles.statsBento}>
               <View style={styles.statItem}>
                 <Text style={styles.statVal}>{cropsCount}</Text>
-                <Text style={styles.statLbl}>Active Crops</Text>
+                <Text style={styles.statLbl}>{t('profile.activeCrops')}</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
                 <Text style={styles.statVal}>{user?.farmSize || '0'}</Text>
-                <Text style={styles.statLbl}>Acres</Text>
+                <Text style={styles.statLbl}>{t('profile.acres')}</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
                 <Text style={styles.statVal}>{user?.soil?.split(' ')[0] || 'Laterite'}</Text>
-                <Text style={styles.statLbl}>Soil Type</Text>
+                <Text style={styles.statLbl}>{t('profile.soilType')}</Text>
               </View>
             </View>
           </SafeAreaView>
         </LinearGradient>
 
-        {/* FARM MANAGEMENT */}
+        {/* FARM TOOLS */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Farm Tools</Text>
+          <Text style={styles.sectionTitle}>{t('profile.farmTools')}</Text>
           <View style={styles.card}>
-            <SettingRow name="calendar-outline" label="Crop Calendar" sublabel="Your personalized season guide" onPress={() => router.push('/calendar')} />
-            <SettingRow name="leaf-outline" label="Soil Advisor" sublabel="Advanced nutrient analysis" onPress={() => router.push('/pest')} />
-            <SettingRow name="water-outline" label="Irrigation Log" sublabel="Manage pump schedules" onPress={() => router.push('/irrigation')} />
+            <SettingRow name="calendar-outline" label={t('profile.cropCalendar')} sublabel={t('profile.cropCalendarSub')} onPress={() => router.push('/drawer/calendar')} />
+            <SettingRow name="leaf-outline" label={t('profile.soilAdvisor')} sublabel={t('profile.soilAdvisorSub')} onPress={() => router.push('/soilAdvisor')} />
+            <SettingRow name="water-outline" label={t('profile.irrigationLog')} sublabel={t('profile.irrigationLogSub')} onPress={() => router.push('/irrigation')} />
           </View>
         </View>
 
-        {/* APP PREFERENCES */}
+        {/* PREFERENCES */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Preferences</Text>
+          <Text style={styles.sectionTitle}>{t('profile.preferences')}</Text>
           <View style={styles.card}>
             <SettingRow
               name="notifications-outline"
-              label="Push Notifications"
-              sublabel="Critical weather & pest alerts"
+              label={t('profile.pushNotif')}
+              sublabel={t('profile.pushNotifSub')}
               onPress={() => setNotifOn(!notifOn)}
               right={
                 <TouchableOpacity onPress={() => setNotifOn(!notifOn)} style={[styles.toggleBase, notifOn && styles.toggleActive]}>
@@ -110,20 +126,51 @@ export default function ProfileScreen() {
                 </TouchableOpacity>
               }
             />
-            <SettingRow name="language-outline" label="App Language" sublabel="English / Konkani / Hindi" />
-            <SettingRow name="help-buoy-outline" label="Support Center" sublabel="Contact Goa Agri Officers" />
+            {/* 🌐 LANGUAGE SWITCHER ROW */}
+            <SettingRow
+              name="language-outline"
+              label={t('profile.appLang')}
+              sublabel={currentLangName}
+              onPress={() => setLangModalVisible(true)}
+            />
+            <SettingRow name="help-buoy-outline" label={t('profile.support')} sublabel={t('profile.supportSub')} />
           </View>
         </View>
 
-        {/* DANGER ZONE */}
+        {/* LOGOUT */}
         <View style={styles.section}>
           <View style={styles.card}>
-            <SettingRow name="log-out-outline" label="Sign Out" danger onPress={handleLogout} />
+            <SettingRow name="log-out-outline" label={t('profile.signOut')} danger onPress={handleLogout} />
           </View>
           <Text style={styles.versionTxt}>AgroGROW v2.4.0 • Build 2026</Text>
         </View>
 
       </ScrollView>
+
+      {/* LANGUAGE MODAL */}
+      <Modal visible={langModalVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <Pressable style={styles.modalDismiss} onPress={() => setLangModalVisible(false)} />
+          <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>{t('profile.appLang')}</Text>
+
+            {Object.entries(languageNames).map(([code, name]) => (
+              <TouchableOpacity
+                key={code}
+                style={[styles.langOption, i18n.language === code && styles.langOptionActive]}
+                onPress={() => changeLanguage(code)}
+              >
+                <Text style={[styles.langOptionText, i18n.language === code && styles.langOptionTextActive]}>
+                  {name}
+                </Text>
+                {i18n.language === code && <Ionicons name="checkmark-circle" size={24} color="#10B981" />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </Modal>
+
     </View>
   );
 }
@@ -161,4 +208,14 @@ const styles = StyleSheet.create({
   toggleKnobActive: { alignSelf: 'flex-end' },
 
   versionTxt: { textAlign: 'center', marginTop: 20, color: '#CBD5E1', fontSize: 11, fontWeight: '700' },
+
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.6)', justifyContent: 'flex-end' },
+  modalDismiss: { flex: 1 },
+  modalContent: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, paddingBottom: 40 },
+  modalHandle: { width: 40, height: 5, backgroundColor: '#E2E8F0', borderRadius: 3, alignSelf: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 20, fontWeight: '800', color: '#0F172A', marginBottom: 20, textAlign: 'center' },
+  langOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 16, paddingHorizontal: 20, borderRadius: 16, marginBottom: 8, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#F1F5F9' },
+  langOptionActive: { backgroundColor: '#ECFDF5', borderColor: '#10B981' },
+  langOptionText: { fontSize: 16, fontWeight: '600', color: '#475569' },
+  langOptionTextActive: { color: '#059669', fontWeight: '800' }
 });

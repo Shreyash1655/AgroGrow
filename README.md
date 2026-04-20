@@ -10,7 +10,7 @@ Built with **Expo SDK 51 + React Native 0.74 + Supabase + Claude AI**.
 npm install
 
 # 2. Start on Android emulator
-npx expo start --android
+npx expo start --android backup backup
 
 # 3. Start on iOS simulator  
 npx expo start --ios

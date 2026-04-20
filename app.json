@@ -7,7 +7,9 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "backgroundColor": "#0d3b22"
+      "image": "./assets/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#064E3B"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -20,10 +22,7 @@
       }
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0d3b22"
-      },
+      "usesCleartextTraffic": true,
       "package": "com.agrogrow.app",
       "permissions": [
         "ACCESS_FINE_LOCATION",
@@ -40,7 +39,8 @@
         {
           "locationWhenInUsePermission": "AgroGROW needs your location for local weather and disease alerts."
         }
-      ]
+      ],
+      "expo-localization"
     ],
     "scheme": "agrogrow",
     "experiments": {
@@ -51,7 +51,7 @@
         "origin": false
       },
       "eas": {
-        "projectId": "3978360e-88e9-4d76-9c2c-2e4c4f69ce7a"
+        "projectId": "f7b35595-7783-4da9-b15f-e0cfcc84b4b7"
       }
     }
   }

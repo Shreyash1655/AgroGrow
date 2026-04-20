@@ -1,0 +1,249 @@
+{
+  "profile": {
+    "farmer": "Farmer",
+    "activeCrops": "Active Crops",
+    "acres": "Acres",
+    "soilType": "Soil Type",
+    "farmTools": "Farm Tools",
+    "cropCalendar": "Crop Calendar",
+    "cropCalendarSub": "Your personalized season guide",
+    "soilAdvisor": "Soil Advisor",
+    "soilAdvisorSub": "Advanced nutrient analysis",
+    "irrigationLog": "Irrigation Log",
+    "irrigationLogSub": "Manage pump schedules",
+    "preferences": "Preferences",
+    "pushNotif": "Push Notifications",
+    "pushNotifSub": "Critical weather & pest alerts",
+    "appLang": "App Language",
+    "support": "Support Center",
+    "supportSub": "Contact Goa Agri Officers",
+    "signOut": "Sign Out",
+    "signOutConfirm": "Are you sure you want to log out of AgroGROW?",
+    "cancel": "Cancel"
+  },
+  "home": {
+    "fetching": "Fetching...",
+    "panajiGoa": "Panaji, Goa",
+    "humidity": "Humidity",
+    "wind": "Wind",
+    "feels": "Feels",
+    "agronomyInsight": "Agronomy Insight",
+    "analyzingTip": "Analyzing local weather patterns for optimal farming conditions...",
+    "highHumidity": "⚠️ High humidity ({{hum}}%). Check {{crop}} for fungal risk.",
+    "optimalConditions": "✅ Optimal conditions for {{crop}} maintenance.",
+    "todaysBriefing": "Today's Briefing",
+    "lifecycle": "Lifecycle",
+    "flowering": "Flowering",
+    "day45": "Day 45 of 120 • Early bloom detected",
+    "dueToday": "DUE TODAY",
+    "lightIrrigation": "Light Irrigation",
+    "morning45": "45 min · Morning",
+    "panajiMandi": "Panaji Mandi",
+    "aiMarketInt": "AI Market Intelligence",
+    "aiMarketSub": "View 7-day predictive price analysis",
+    "outlook7Day": "7-Day Outlook",
+    "today": "Today",
+    "sun": "Sun", "mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu", "fri": "Fri", "sat": "Sat",
+    "actionableData": "Actionable Data",
+    "alerts": "Alerts",
+    "riskMap": "Risk Map",
+    "pestsAi": "Pests AI",
+    "goaAgri": "Goa Agri",
+    "dynamicDayProgress": "Day {{day}} of {{total}} • Tracking phase"
+  },
+  "pest": {
+    "title": "Pest Intelligence",
+    "riskStatus": "RISK STATUS",
+    "criticalAlert": "Critical Alert",
+    "watchRequired": "Watch Required",
+    "statusOptimal": "Status: Optimal",
+    "humid": "Humid",
+    "myCrops": "My Crops",
+    "topThreats": "Top Threats",
+    "season": "Season",
+    "crops": {
+      "cashew": "Cashew",
+      "paddy": "Paddy",
+      "coconut": "Coconut",
+      "arecanut": "Areca Nut",
+      "mango": "Mango",
+      "pepper": "Pepper"
+    },
+    "threats": {
+      "cashew": [
+        { "nm": "Tea Mosquito Bug", "sea": "Flushing", "desc": "Sucks sap from shoots causing necrotic lesions.", "tips": ["Spray Neem G", "Prune dead wood"] },
+        { "nm": "Stem & Root Borer", "sea": "Year Round", "desc": "Larvae bore into bark; causes yellowing.", "tips": ["Remove grubs manually", "Clean trunk area"] },
+        { "nm": "Leaf Miner", "sea": "Post Monsoon", "desc": "Silver tracks on leaves; reduces vigor.", "tips": ["Apply biopesticides", "Remove mined leaves"] },
+        { "nm": "Anthracnose", "sea": "Flowering", "desc": "Brown spots on flowers; causing drop.", "tips": ["Apply Copper Oxychloride"] }
+      ],
+      "paddy": [
+        { "nm": "Rice Blast", "sea": "High Humid", "desc": "Spindle spots on leaves; neck rot.", "tips": ["Avoid excess Nitrogen", "Proper drainage"] },
+        { "nm": "Brown Plant Hopper", "sea": "Booting", "desc": "Sucks sap from base; causes hopper burn.", "tips": ["Alternate wetting/drying"] },
+        { "nm": "Stem Borer", "sea": "Vegetative", "desc": "Larvae cut central shoot; 'dead heart'.", "tips": ["Install pheromone traps"] },
+        { "nm": "Bacterial Leaf Blight", "sea": "Rainy", "desc": "Yellowish wavy lesions along edges.", "tips": ["Avoid field flooding"] }
+      ],
+      "mango": [
+        { "nm": "Powdery Mildew", "sea": "Flowering", "desc": "White coating; reduces fruit set.", "tips": ["Wettable Sulphur spray"] },
+        { "nm": "Mango Hopper", "sea": "Early Spring", "desc": "Heavy excretion; causes sooty mold.", "tips": ["Ensure air circulation"] },
+        { "nm": "Fruit Fly", "sea": "Ripening", "desc": "Larvae feed on pulp; causes rot.", "tips": ["Use methyl eugenol traps"] },
+        { "nm": "Stem Borer", "sea": "Year Round", "desc": "Large holes in trunk; wood dust.", "tips": ["Seal holes with clay/insecticide"] }
+      ],
+      "arecanut": [
+        { "nm": "Mahali (Fruit Rot)", "sea": "Heavy Rain", "desc": "Water soaked lesions; nut drop.", "tips": ["Prophylactic Bordeaux spray"] },
+        { "nm": "Yellow Leaf Disease", "sea": "Summer", "desc": "Chlorosis of leaves; reduced yield.", "tips": ["Balanced nutrition (NPK)"] },
+        { "nm": "Spindle Bug", "sea": "Monsoon", "desc": "Feeds on inner leaf; black streaks.", "tips": ["Phasing out infected plants"] },
+        { "nm": "Root Grub", "sea": "Post-Monsoon", "desc": "Feeds on roots; causes yellowing.", "tips": ["Soil drenching in root zone"] }
+      ],
+      "pepper": [
+        { "nm": "Quick Wilt", "sea": "Monsoon", "desc": "Sudden collapse of vines.", "tips": ["Improve drainage", "Apply Trichoderma"] },
+        { "nm": "Slow Wilt", "sea": "Post-Rain", "desc": "Gradual decline and yellowing.", "tips": ["Nematode management"] },
+        { "nm": "Pollu Beetle", "sea": "Flowering", "desc": "Larvae eat internal berry seeds.", "tips": ["Spray biopesticides"] },
+        { "nm": "Thrips", "sea": "Pre-harvest", "desc": "Curl edges of young leaves.", "tips": ["Apply systemic insecticide"] }
+      ],
+      "coconut": [
+        { "nm": "Rhinoceros Beetle", "sea": "Year Round", "desc": "Cuts 'V' shapes; damages crown.", "tips": ["Field sanitation", "Castor cake pits"] },
+        { "nm": "Red Palm Weevil", "sea": "Summer", "desc": "Larvae bore into stem; crown wilts.", "tips": ["Early detection of holes"] },
+        { "nm": "Eriophyid Mite", "sea": "Dry Spells", "desc": "Brownish patches on husk.", "tips": ["Root feeding of nutrients"] },
+        { "nm": "Bud Rot", "sea": "Heavy Rain", "desc": "Center leaf rots; lethal if ignored.", "tips": ["Clean crown; apply fungicides"] }
+      ]
+    }
+  },
+  "soilAdvisor": {
+    "title": "Soil & Crop Advisor",
+    "step1": "1. Select Target Crop",
+    "step2": "2. Select Soil Type",
+    "analyzeBtn": "Analyze Compatibility",
+    "soilFor": "{{soil}} Soil for {{crop}}",
+    "suitability": "Suitability",
+    "nitrogen": "Nitrogen (N)",
+    "phosphorus": "Phosphorus (P)",
+    "potassium": "Potassium (K)",
+    "idealPh": "Ideal pH",
+    "agronomyPlan": "Agronomy Plan",
+    "crucialWarning": "Crucial Warning",
+    "levels": { "low": "Low", "med": "Med", "high": "High" },
+    "matches": { "excellent": "Excellent", "good": "Good", "fair": "Fair", "poor": "Poor" },
+    "fallbackFert": "Standard NPK application required.",
+    "fallbackWarn": "Monitor soil moisture regularly.",
+    "crops": {
+      "cashew": "Cashew", "paddy": "Paddy", "coconut": "Coconut", "vegetable": "Vegetable",
+      "sugarcane": "Sugarcane", "maize": "Maize", "banana": "Banana", "groundnut": "Groundnut"
+    },
+    "soils": {
+      "laterite": "Red Laterite", "alluvial": "Alluvial", "clay": "Clay",
+      "sandy": "Sandy", "loam": "Loamy", "black": "Black Cotton"
+    },
+    "data": {
+      "cashew": {
+        "laterite": { "score": 78, "n": "Low", "p": "Low", "k": "Med", "ph": "5.2–6.5", "fert": "Apply 500g NPK 10:10:10/tree in April & October. Add 5kg compost/tree.", "warn": "Watch for boron deficiency — apply Borax 10g/tree.", "match": "Excellent" },
+        "alluvial": { "score": 60, "n": "Med", "p": "Med", "k": "Med", "ph": "6.0–7.0", "fert": "Apply 400g NPK 12:6:10/tree. Ensure drainage.", "warn": "Prone to waterlogging — raise beds where possible.", "match": "Good" },
+        "clay": { "score": 45, "n": "High", "p": "Med", "k": "High", "ph": "5.5–6.5", "fert": "Reduce NPK to 300g/tree. Improve drainage.", "warn": "Heavy clay may stunt root growth. Add sand.", "match": "Fair" },
+        "sandy": { "score": 55, "n": "Low", "p": "Low", "k": "Low", "ph": "5.0–6.0", "fert": "Frequent light doses: 200g NPK every 3 months.", "warn": "High leaching risk — use slow-release fertilizers.", "match": "Fair" },
+        "loam": { "score": 85, "n": "Med", "p": "Med", "k": "High", "ph": "6.0–6.8", "fert": "Apply 450g NPK 10:10:10/tree twice yearly.", "warn": "Monitor for fungal diseases in humid seasons.", "match": "Excellent" },
+        "black": { "score": 38, "n": "High", "p": "Low", "k": "High", "ph": "7.0–8.0", "fert": "Not recommended. If used, add sulphur to lower pH.", "warn": "Alkaline pH severely limits cashew nutrient uptake.", "match": "Poor" }
+      },
+      "paddy": {
+        "laterite": { "score": 50, "n": "Low", "p": "Low", "k": "Med", "ph": "5.5–6.5", "fert": "Apply 120kg N/ha split in 3 doses. Add 60kg P2O5.", "warn": "Iron toxicity risk in flooded laterite soils.", "match": "Fair" },
+        "alluvial": { "score": 92, "n": "High", "p": "Med", "k": "High", "ph": "6.0–7.0", "fert": "Apply 100kg urea/ha. Minimal P needed.", "warn": "Watch for blast disease in humid conditions.", "match": "Excellent" },
+        "clay": { "score": 88, "n": "High", "p": "High", "k": "High", "ph": "6.0–7.5", "fert": "Apply 80kg N/ha. Clay retains water perfectly.", "warn": "Ensure flood control to prevent anaerobic conditions.", "match": "Excellent" },
+        "sandy": { "score": 30, "n": "Low", "p": "Low", "k": "Low", "ph": "5.0–6.0", "fert": "Not suitable. Very high water requirements.", "warn": "Sandy soil cannot hold flooded water.", "match": "Poor" },
+        "loam": { "score": 80, "n": "Med", "p": "Med", "k": "High", "ph": "6.0–7.0", "fert": "Apply 90kg N/ha in two splits.", "warn": "Monitor zinc deficiency — apply ZnSO4 25kg/ha.", "match": "Good" },
+        "black": { "score": 72, "n": "High", "p": "Low", "k": "High", "ph": "7.0–8.0", "fert": "Apply 60kg N/ha + 40kg P/ha.", "warn": "Alkalinity may reduce iron availability.", "match": "Good" }
+      },
+      "vegetable": {
+        "loam": { "score": 95, "n": "High", "p": "High", "k": "High", "ph": "6.5–7.5", "fert": "Best soil. Apply 100kg N/ha in splits.", "warn": "Rotate crops to prevent disease buildup.", "match": "Excellent" }
+      }
+    }
+  },
+  "market": {
+    "shopTitle": "Shop",
+    "searchPlaceholder": "Search...",
+    "all": "All",
+    "specialOffers": "Special Offers",
+    "newProducts": "New Products",
+    "shopNow": "Shop Now",
+    "addToCart": "Add to Cart",
+    "added": "✓ Added!",
+    "categoriesList": ["Seeds", "Fertilizers", "Pesticides", "Tools"],
+    "ads": [
+      { "title": "Monsoon Super Sale", "subtitle": "Up to 40% off on Fertilizers", "badge": "LIMITED OFFER" },
+      { "title": "Premium Seeds", "subtitle": "Buy 2 Get 1 Free on all Seeds", "badge": "NEW ARRIVAL" },
+      { "title": "Free Delivery", "subtitle": "Orders above ₹500 — Pan India", "badge": "TODAY ONLY" }
+    ]
+  },
+  "productDetail": {
+    "hi": "Hi",
+    "readReviews": "Read all {{count}} Reviews",
+    "incentive": "Incentive Amount",
+    "qty": "Qty:",
+    "about": "About",
+    "defaultDesc": "Boosts plant growth naturally with balanced nutrients. Improves soil health, increases yield, and supports sustainable farming—perfect for all types of crops.",
+    "featuresHeading": "Product Features",
+    "features": ["Higher Yield", "Soil Health", "Strong Roots", "Better Growth", "Eco Friendly"],
+    "sowingSeason": "Sowing Season",
+    "kharifRabi": "Kharif, Rabi",
+    "sowingMethod": "Sowing Method",
+    "transplanting": "Transplanting",
+    "sowingSpacing": "Sowing Spacing",
+    "spacingVal": "R–R=15 cm, P–P=10 cm",
+    "addToCart": "Add to Cart",
+    "added": "✓ Added!",
+    "buyNow": "Buy Now"
+  },
+  "cart": {
+    "myCart": "My Cart",
+    "emptyCart": "Your cart is empty",
+    "continueShopping": "Continue Shopping",
+    "subTotal": "Sub total",
+    "taxes": "Taxes",
+    "deliveryCharges": "Delivery Charges",
+    "amountToPay": "Amount to Pay",
+    "deliveryAddress": "Delivery Address",
+    "checkout": "Checkout"
+  },
+  "checkout": {
+    "stepDetails": "Details",
+    "stepPayment": "Payment",
+    "stepPreview": "Order Preview",
+    "orderingFor": "Ordering For",
+    "farmer": "Farmer",
+    "acres": "Acres",
+    "fullName": "Full Name",
+    "mobileNumber": "Mobile Number",
+    "zipCode": "Zip Code",
+    "continue": "Continue",
+    "items": "Items",
+    "delivery": "Delivery:",
+    "tax": "Tax:",
+    "total": "Total:",
+    "soldBy": "Sold by Annadatha Fertilizers",
+    "itemsCount": "items",
+    "deliveryDetails": "Delivery Details",
+    "name": "Name",
+    "phone": "Phone",
+    "taluka": "Taluka",
+    "location": "Location",
+    "noProfileInfo": "No profile info found",
+    "requestConfirmation": "Request Confirmation",
+    "thankYou": "Thank you",
+    "requestCreated": "Your request has been created",
+    "successfully": "Successfully",
+    "viewOrder": "View Order",
+    "shareWhatsapp": "Share Via WhatsApp",
+    "back": "Back",
+    "checkoutTitle": "Checkout"
+  },
+  "orders": {
+    "title": "My Orders",
+    "upcoming": "UPCOMING",
+    "past": "PAST",
+    "noOrders": "No {{tab}} orders",
+    "estimatedDelivery": "Estimated Delivery on {{date}}",
+    "qty": "Quantity",
+    "cod": "Cash on delivery",
+    "placed": "Order Placed",
+    "out_for_delivery": "Out for Delivery",
+    "delivered": "Delivered",
+    "cancelled": "Cancelled"
+  }
+}

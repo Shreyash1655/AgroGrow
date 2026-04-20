@@ -15,7 +15,7 @@ extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
       'react-native-config',
       '--json',
       '--platform',
-      'android backup'
+      'android'
     ].toList()
     ex.autolinkLibrariesFromCommand(command)
   }

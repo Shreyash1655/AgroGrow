@@ -1,62 +1,189 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Animated, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Animated, TouchableOpacity, Dimensions, StatusBar } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BtnPrimary, BtnOutline, FadeIn } from '../../src/components/UI';
-import { Colors, Fonts, Radius } from '../../src/theme';
+// Premium Icons
+import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+
+const { width } = Dimensions.get('window');
 
 const FEATURES = [
-  { ico: '🗺️', title: 'Live Disease Risk Map', sub: 'GPS outbreak detection — 5km radius alerts' },
-  { ico: '🤖', title: 'Claude AI Chatbot', sub: 'Real answers in Konkani, Marathi & English' },
-  { ico: '🌤️', title: 'Hyper-local Weather', sub: 'Village-level forecasts via Open-Meteo' },
-  { ico: '🛒', title: 'Agri Marketplace', sub: 'Buy inputs with Govt incentive prices' },
+  { ico: 'partly-sunny', title: 'Smart Weather', desc: 'Hyperlocal forecasts for your exact farm location', color: '#F59E0B' },
+  { ico: 'leaf', title: 'Crop Advisor', desc: 'AI recommendations tailored for Goan laterite soil', color: '#10B981' },
+  { ico: 'shield-alert', title: 'Pest Alerts', desc: 'Early warnings based on real-time weather risk', color: '#EF4444' },
+  { ico: 'water', title: 'Irrigation Guide', desc: 'Know exactly when and how much to water daily', color: '#0EA5E9' },
 ];
 
-export default function Onboard() {
-  return (
-    <LinearGradient colors={['#0d3b22', '#1a5c35', '#2d8653']} style={{ flex: 1 }}>
-      <SafeAreaView style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.wrap} showsVerticalScrollIndicator={false}>
-          <FadeIn delay={0}>
-            <Text style={styles.logo}>🌱</Text>
-            <Text style={styles.title}>AgroGROW</Text>
-            <Text style={styles.sub}>Your AI-powered smart farming companion.{'\n'}Built for Goa's cashew, paddy & coconut farmers.</Text>
-          </FadeIn>
+export default function OnboardingScreen() {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+  // Staggered animations for feature rows
+  const rowAnims = useRef(FEATURES.map(() => new Animated.Value(0))).current;
 
-          <View style={styles.features}>
+  useEffect(() => {
+    // Entrance for header and buttons
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 800, useNativeDriver: true }),
+    ]).start();
+
+    // Staggered entrance for feature cards
+    const animations = rowAnims.map((anim, i) =>
+      Animated.timing(anim, {
+        toValue: 1,
+        duration: 500,
+        delay: 400 + (i * 150),
+        useNativeDriver: true
+      })
+    );
+    Animated.stagger(150, animations).start();
+  }, []);
+
+  return (
+    <View style={{ flex: 1, backgroundColor: '#064E3B' }}>
+      <StatusBar barStyle="light-content" />
+
+      {/* Background Glow Effect */}
+      <View style={styles.glowCircle} />
+
+      <LinearGradient
+        colors={['transparent', 'rgba(6, 78, 59, 0.95)', '#064E3B']}
+        style={StyleSheet.absoluteFill}
+      />
+
+      <SafeAreaView style={{ flex: 1 }}>
+        <Animated.View style={[styles.container, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+
+          {/* Logo & Header */}
+          <View style={styles.headerBox}>
+            <View style={styles.logoCircle}>
+              <MaterialCommunityIcons name="seed-outline" size={40} color="#10B981" />
+            </View>
+            <Text style={styles.brandTitle}>Agro<Text style={{ color: '#10B981' }}>GROW</Text></Text>
+            <View style={styles.taglinePill}>
+              <Text style={styles.tagline}>PRECISION FARMING FOR GOA</Text>
+            </View>
+          </View>
+
+          {/* Features List */}
+          <View style={styles.featuresContainer}>
             {FEATURES.map((f, i) => (
-              <FadeIn key={i} delay={200 + i * 80}>
-                <View style={styles.featureRow}>
-                  <Text style={styles.featureIco}>{f.ico}</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.featureTitle}>{f.title}</Text>
-                    <Text style={styles.featureSub}>{f.sub}</Text>
-                  </View>
+              <Animated.View
+                key={i}
+                style={[
+                  styles.featureRow,
+                  {
+                    opacity: rowAnims[i],
+                    transform: [{ translateX: rowAnims[i].interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }]
+                  }
+                ]}
+              >
+                <View style={[styles.iconBox, { backgroundColor: f.color + '20' }]}>
+                  <MaterialCommunityIcons name={f.ico} size={24} color={f.color} />
                 </View>
-              </FadeIn>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.featureTitle}>{f.title}</Text>
+                  <Text style={styles.featureDesc}>{f.desc}</Text>
+                </View>
+              </Animated.View>
             ))}
           </View>
 
-          <FadeIn delay={600} style={styles.btns}>
-            <BtnPrimary label="Get Started →" onPress={() => router.push('/(auth)/register')} style={{ marginBottom: 12 }} />
-            <BtnOutline label="I already have an account" onPress={() => router.push('/(auth)/login')} style={{ borderColor: 'rgba(255,255,255,.35)' }} />
-          </FadeIn>
-        </ScrollView>
+          {/* Footer Buttons */}
+          <View style={styles.footer}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => router.push('/(auth)/login')}
+              style={styles.primaryBtn}
+            >
+              <LinearGradient
+                colors={['#10B981', '#059669']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.btnGrad}
+              >
+                <Text style={styles.primaryBtnText}>Get Started</Text>
+                <Feather name="arrow-right" size={20} color="#FFF" />
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => router.push('/(auth)/login')}
+              style={styles.secondaryBtn}
+            >
+              <Text style={styles.secondaryBtnText}>Already have an account? <Text style={{ color: '#10B981', fontWeight: '800' }}>Login</Text></Text>
+            </TouchableOpacity>
+          </View>
+
+        </Animated.View>
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { padding: 26, paddingTop: 40, alignItems: 'center', gap: 0 },
-  logo: { fontSize: 72, textAlign: 'center', marginBottom: 8 },
-  title: { fontFamily: Fonts.displayExtraBold, fontSize: 36, color: '#fff', textAlign: 'center', letterSpacing: -0.5 },
-  sub: { fontFamily: Fonts.medium, fontSize: 14, color: 'rgba(255,255,255,.7)', textAlign: 'center', lineHeight: 22, marginTop: 10, marginBottom: 28 },
-  features: { width: '100%', gap: 10, marginBottom: 28 },
-  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: 'rgba(255,255,255,.1)', borderRadius: Radius.r16, padding: 14 },
-  featureIco: { fontSize: 26 },
-  featureTitle: { fontFamily: Fonts.extraBold, fontSize: 14, color: '#fff' },
-  featureSub: { fontFamily: Fonts.medium, fontSize: 12.5, color: 'rgba(255,255,255,.8)', marginTop: 2, lineHeight: 18 },
-  btns: { width: '100%', gap: 0 },
+  container: { flex: 1, padding: 24 },
+  glowCircle: {
+    position: 'absolute',
+    top: -width * 0.2,
+    right: -width * 0.2,
+    width: width * 1.2,
+    height: width * 1.2,
+    borderRadius: width * 0.6,
+    backgroundColor: '#10B981',
+    opacity: 0.15,
+  },
+
+  headerBox: { alignItems: 'center', marginTop: 40, marginBottom: 40 },
+  logoCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    marginBottom: 20
+  },
+  brandTitle: { fontSize: 42, color: '#fff', fontWeight: '900', letterSpacing: -1.5 },
+  taglinePill: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginTop: 8
+  },
+  tagline: { fontSize: 11, color: '#10B981', fontWeight: '800', letterSpacing: 1.5 },
+
+  featuresContainer: { gap: 16 },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 24,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)'
+  },
+  iconBox: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  featureTitle: { color: '#fff', fontWeight: '800', fontSize: 16, letterSpacing: -0.3 },
+  featureDesc: { color: 'rgba(255,255,255,0.5)', fontSize: 13, marginTop: 4, lineHeight: 18 },
+
+  footer: { marginTop: 'auto', paddingBottom: 20 },
+  primaryBtn: { height: 64, borderRadius: 32, overflow: 'hidden', elevation: 8, shadowColor: '#10B981', shadowOpacity: 0.3, shadowRadius: 15, shadowOffset: { width: 0, height: 8 } },
+  btnGrad: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  primaryBtnText: { color: '#fff', fontWeight: '800', fontSize: 18 },
+
+  secondaryBtn: { marginTop: 20, alignItems: 'center', paddingVertical: 10 },
+  secondaryBtnText: { color: 'rgba(255,255,255,0.6)', fontSize: 14, fontWeight: '500' },
 });

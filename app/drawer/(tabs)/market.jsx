@@ -1,366 +1,604 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState } from "react";
 import {
-  View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity,
-  ScrollView, Modal, Pressable, Animated, Image,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useNavigation } from 'expo-router';
-import * as Haptics from 'expo-haptics';
+  ActivityIndicator, Alert, Dimensions, FlatList, Image, Modal,
+  Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, StatusBar, KeyboardAvoidingView
+} from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system";
+import { createClient } from "@supabase/supabase-js";
+import { collection, getDocs } from "firebase/firestore"; // Kept for Official Store
+import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
+import { Ionicons } from "@expo/vector-icons";
+import {
+  Search, Plus, MapPin, Camera, X, ArrowLeft, Image as ImageIcon,
+  Heart, Leaf, PawPrint, Wrench, Map, Sprout, FlaskConical, Tractor
+} from "lucide-react-native";
 
-// ✅ FIXED: Using 3 dots instead of 4
-import { FadeIn, PressScale, Pill } from '../../src/components/UI';
-import { useApp } from '../../src/store/AppContext';
-import { Colors, Fonts, Radius, Shadows } from '../../src/theme';
-import { PRODS } from '../../src/data/staticData';
+import { db } from "../../../firebaseConfig"; // Firebase for Official Store
+import { useCart } from "../../../src/context/CartContext";
 
-const CATS = [{ v:'all',l:'All' },{ v:'fertilizer',l:'🌿 Fertilizer' },{ v:'pesticide',l:'🛡️ Pesticide' },{ v:'seed',l:'🌱 Seeds' },{ v:'tool',l:'🔧 Tools' }];
+// ─── SUPABASE CONFIG ─────────────────────────────────────────────
+// Use your actual Supabase URL and Key here
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-function ProductCard({ prod, onAdd, onPress }) {
-  const scale = useRef(new Animated.Value(1)).current;
-  function handleAdd() {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Animated.sequence([
-      Animated.spring(scale, { toValue: 0.92, useNativeDriver: true, tension: 300 }),
-      Animated.spring(scale, { toValue: 1, useNativeDriver: true, tension: 300 }),
-    ]).start();
-    onAdd(prod);
-  }
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+
+// ─── SHARED DATA ─────────────────────────────────────────────────
+const STORE_CATEGORIES = [
+  { id: 'Seeds', label: 'Seeds', icon: 'leaf' },
+  { id: 'Fertilizers', label: 'Fertilizers', icon: 'flask' },
+  { id: 'Pesticides', label: 'Pesticides', icon: 'bug' },
+  { id: 'Tools', label: 'Tools', icon: 'hardware-chip' },
+];
+
+const OLX_CATEGORIES = [
+  { label: "Crops", icon: <Leaf size={16} /> },
+  { label: "Livestock", icon: <PawPrint size={16} /> },
+  { label: "Tools", icon: <Wrench size={16} /> },
+  { label: "Land", icon: <Map size={16} /> },
+  { label: "Seeds", icon: <Sprout size={16} /> },
+  { label: "Fertilizers", icon: <FlaskConical size={16} /> },
+  { label: "Vehicles", icon: <Tractor size={16} /> },
+];
+
+const AD_STYLES = [
+  { id: "1", bg: "#064E3B", accent: "#10B981", icon: "leaf" },
+  { id: "2", bg: "#D97706", accent: "#FDE68A", icon: "flower-outline" },
+  { id: "3", bg: "#0284C7", accent: "#BAE6FD", icon: "bicycle-outline" },
+];
+
+// ─── AD BANNER COMPONENT ─────────────────────────────────────────
+function AdBanner() {
+  const { t } = useTranslation();
+  const rawAds = t('market.ads', { returnObjects: true }) || [];
+  const AD_CARDS = rawAds.length > 0 ? rawAds.map((ad, i) => ({ ...ad, ...(AD_STYLES[i] || AD_STYLES[0]) })) : AD_STYLES;
+
   return (
-    <FadeIn style={{ flex: 1, margin: 5 }}>
-      <Animated.View style={{ transform: [{ scale }] }}>
-        <TouchableOpacity style={styles.prodCard} onPress={() => onPress(prod)} activeOpacity={0.9}>
-          <View style={styles.prodImg}>
-            <Text style={{ fontSize: 48 }}>{prod.emo}</Text>
-            <TouchableOpacity style={styles.addBtn} onPress={handleAdd}>
-              <Text style={styles.addBtnText}>+ Add</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.prodInfo}>
-            <Text style={styles.prodName} numberOfLines={2}>{prod.nm}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 5 }}>
-              <Text style={styles.prodPrice}>₹{prod.pr}</Text>
-              {prod.mrp > 0 && <Text style={styles.prodMrp}>₹{prod.mrp}</Text>}
+    <View style={adStyles.wrapper}>
+      <Text style={adStyles.sectionTitle}>{t('market.specialOffers', 'Special Offers')}</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 10 }}>
+        {AD_CARDS.map((card) => (
+          <View key={card.id} style={[adStyles.card, { backgroundColor: card.bg }]}>
+            <View style={adStyles.circle} />
+            <View style={adStyles.cardContent}>
+              <View style={[adStyles.badgePill, { backgroundColor: card.accent }]}>
+                <Text style={[adStyles.badgeText, { color: card.bg }]}>{card.badge || 'PROMO'}</Text>
+              </View>
+              <Text style={adStyles.cardTitle} numberOfLines={1}>{card.title || 'Offer'}</Text>
+              <Text style={adStyles.cardSubtitle} numberOfLines={2}>{card.subtitle || 'Grab it now'}</Text>
+              <TouchableOpacity style={adStyles.shopBtn} activeOpacity={0.8}>
+                <Text style={adStyles.shopBtnText}>{t('market.shopNow', 'Shop Now')}</Text>
+              </TouchableOpacity>
             </View>
-            {prod.inc > 0 && <Text style={styles.prodInc}>Govt −₹{prod.inc}</Text>}
-            <Text style={styles.prodLoc}>📍 {prod.sloc}</Text>
+            <View style={adStyles.iconBox}>
+              <Ionicons name={card.icon} size={64} color="rgba(255,255,255,0.15)" />
+            </View>
           </View>
-        </TouchableOpacity>
-      </Animated.View>
-    </FadeIn>
+        ))}
+      </ScrollView>
+    </View>
   );
 }
 
-// ── Product Detail Modal ─────────────────────────────────────
-function ProductModal({ prod, visible, onClose, onAdd, onBuy }) {
-  const [qty, setQty] = useState(1);
-  const slideAnim = useRef(new Animated.Value(600)).current;
+// ─── SELL MODAL (Supabase Upload Flow) ───────────────────────────
+function SellModal({ visible, onClose, onSuccess }) {
+  const [step, setStep] = useState(1);
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [title, setTitle] = useState("");
+  const [price, setPrice] = useState("");
+  const [description, setDescription] = useState("");
+  const [location, setLocation] = useState("");
+  const [sellerName, setSellerName] = useState("");
+  const [images, setImages] = useState([]);
+  const [posting, setPosting] = useState(false);
 
-  React.useEffect(() => {
-    if (visible) {
-      setQty(1);
-      Animated.spring(slideAnim, { toValue: 0, tension: 65, friction: 12, useNativeDriver: true }).start();
-    } else {
-      Animated.timing(slideAnim, { toValue: 600, duration: 280, useNativeDriver: true }).start();
+  const resetForm = () => {
+    setStep(1); setSelectedCategory(""); setTitle(""); setPrice("");
+    setDescription(""); setLocation(""); setSellerName(""); setImages([]);
+  };
+
+  const pickImage = async (fromCamera) => {
+    const perm = fromCamera ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) return Alert.alert("Permission needed", "Please allow access to continue.");
+
+    const result = fromCamera
+      ? await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.6, allowsEditing: true, aspect: [4, 3] })
+      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.6, allowsMultipleSelection: true, selectionLimit: 1 }); // Keeping to 1 for reliable Supabase upload demo
+
+    if (!result.canceled) {
+      const uris = result.assets.map((a) => a.uri);
+      setImages(uris); // Set image
     }
-  }, [visible]);
+  };
 
-  if (!prod) return null;
+  const handlePost = async () => {
+    if (!title || !price || !location || !sellerName || images.length === 0) {
+       return Alert.alert("Missing Info", "Please add a photo, title, price, and location.");
+    }
 
-  const stars = [1,2,3,4,5].map(s => s <= Math.floor(prod.rat) ? '★' : '☆');
+    setPosting(true);
+    try {
+      let publicUrl = null;
+
+      // 1. UPLOAD IMAGE TO SUPABASE
+      const uri = images[0];
+      const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+
+      // Base64 decoding for Supabase
+      const decode = (b64) => {
+        const bin = atob(b64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        return bytes.buffer;
+      };
+
+      const fileExt = uri.split('.').pop().toLowerCase();
+      const fileName = `${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('olx-images') // Make sure this bucket exists and is public!
+        .upload(fileName, decode(base64), { contentType: `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}` });
+
+      if (uploadError) throw uploadError;
+
+      // 2. GET PUBLIC URL
+      const { data: urlData } = supabase.storage.from('olx-images').getPublicUrl(fileName);
+      publicUrl = urlData.publicUrl;
+
+      // 3. SAVE LISTING TO SUPABASE DATABASE
+      const { error: dbError } = await supabase.from('farmer_listings').insert([{
+        title,
+        price: parseFloat(price),
+        description,
+        location,
+        seller_name: sellerName,
+        category: selectedCategory,
+        image_url: publicUrl,
+        created_at: new Date().toISOString()
+      }]);
+
+      if (dbError) throw dbError;
+
+      Alert.alert("Posted Successfully!", "Your item is now visible to other farmers.", [{
+        text: "Awesome",
+        onPress: () => {
+          resetForm();
+          onClose();
+          if(onSuccess) onSuccess(); // Refresh listings
+        }
+      }]);
+    } catch (e) {
+      Alert.alert("Error", e.message || "Could not post listing. Try again.");
+    } finally {
+      setPosting(false);
+    }
+  };
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose} />
-      <Animated.View style={[styles.prodModal, { transform: [{ translateY: slideAnim }] }]}>
-        <View style={styles.sheetHandle} />
-        <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
-          <View style={styles.prodModalImg}><Text style={{ fontSize: 80 }}>{prod.emo}</Text></View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 16, marginTop: 6 }}>
-            <Text style={{ color: Colors.amber, fontSize: 14, letterSpacing: 1 }}>{stars.join('')}</Text>
-            <Text style={{ fontFamily: Fonts.bold, fontSize: 12, color: Colors.g400 }}>{prod.rev} reviews</Text>
-          </View>
-          <View style={{ padding: 16, gap: 8 }}>
-            <Text style={styles.prodModalName}>{prod.nm}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <Text style={styles.prodModalPrice}>₹{prod.pr}</Text>
-              {prod.inc > 0 && (
-                <View style={{ backgroundColor: Colors.redp, borderRadius: Radius.r99, paddingHorizontal: 9, paddingVertical: 3 }}>
-                  <Text style={{ fontFamily: Fonts.extraBold, fontSize: 11, color: Colors.red }}>Govt −₹{prod.inc}</Text>
-                </View>
-              )}
-            </View>
-            <Text style={styles.prodModalLoc}>📍 {prod.sloc}</Text>
-            <Text style={styles.prodModalDesc}>{prod.desc}</Text>
-            {/* Features */}
-            <View style={styles.featWrap}>
-              {prod.feats.map((f, i) => (
-                <View key={i} style={styles.featChip}>
-                  <Text style={styles.featText}>✓ {f}</Text>
-                </View>
-              ))}
-            </View>
-            {/* Qty */}
-            <View style={styles.qtyRow}>
-              <Text style={{ fontFamily: Fonts.extraBold, fontSize: 14, color: Colors.g700 }}>Quantity</Text>
-              <View style={styles.qtyControl}>
-                <TouchableOpacity style={styles.qtyBtn} onPress={() => setQty(q => Math.max(1, q - 1))}>
-                  <Text style={styles.qtyBtnText}>−</Text>
-                </TouchableOpacity>
-                <Text style={styles.qtyNum}>{qty}</Text>
-                <TouchableOpacity style={styles.qtyBtn} onPress={() => setQty(q => q + 1)}>
-                  <Text style={styles.qtyBtnText}>+</Text>
-                </TouchableOpacity>
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#FFF" }}>
+        <View style={sellStyles.header}>
+          <TouchableOpacity onPress={() => { resetForm(); onClose(); }} style={sellStyles.iconBtn}>
+            <ArrowLeft size={24} color="#0F172A" />
+          </TouchableOpacity>
+          <Text style={sellStyles.headerTitle}>
+            {step === 1 ? "What are you selling?" : step === 2 ? "Upload Product Photo" : "Set Price & Details"}
+          </Text>
+          <View style={{ width: 40 }} />
+        </View>
+
+        <View style={sellStyles.stepRow}>
+          {[1, 2, 3].map((s) => (
+            <View key={s} style={sellStyles.stepWrap}>
+              <View style={[sellStyles.stepDot, step >= s && sellStyles.stepDotActive]}>
+                <Text style={[sellStyles.stepNum, step >= s && { color: "#fff" }]}>{s}</Text>
               </View>
+              {s < 3 && <View style={[sellStyles.stepLine, step > s && sellStyles.stepLineActive]} />}
             </View>
-            {/* CTA */}
-            <View style={styles.ctaRow}>
-              <TouchableOpacity style={styles.cartBtn} onPress={() => { onAdd(prod, qty); onClose(); }}>
-                <Text style={styles.cartBtnText}>Add to Cart</Text>
-              </TouchableOpacity>
-              <PressScale style={{ flex: 1 }} onPress={() => { onAdd(prod, qty); onBuy(); onClose(); }}>
-                <LinearGradient colors={[Colors.g3, Colors.g1]} style={styles.buyBtn}>
-                  <Text style={styles.buyBtnText}>Buy Now →</Text>
-                </LinearGradient>
-              </PressScale>
-            </View>
-          </View>
-        </ScrollView>
-      </Animated.View>
+          ))}
+        </View>
+
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+          {step === 1 && (
+            <ScrollView contentContainerStyle={sellStyles.catGrid}>
+              {OLX_CATEGORIES.map((cat) => (
+                <TouchableOpacity
+                  key={cat.label}
+                  style={[sellStyles.catCard, selectedCategory === cat.label && sellStyles.catCardSelected]}
+                  onPress={() => setSelectedCategory(cat.label)}
+                >
+                  <View style={{ opacity: selectedCategory === cat.label ? 1 : 0.6 }}>{cat.icon}</View>
+                  <Text style={[sellStyles.catLabel, selectedCategory === cat.label && { color: "#fff" }]}>{cat.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+
+          {step === 2 && (
+            <ScrollView contentContainerStyle={{ padding: 20 }}>
+              <Text style={sellStyles.photoHint}>Upload a clear photo of what you are selling. Buyers love good pictures!</Text>
+              <View style={sellStyles.photoGrid}>
+                {images.map((uri, i) => (
+                  <View key={i} style={sellStyles.photoThumb}>
+                    <Image source={{ uri }} style={{ width: "100%", height: "100%", borderRadius: 16 }} />
+                    <TouchableOpacity style={sellStyles.removeBtn} onPress={() => setImages([])}>
+                      <X size={14} color="#EF4444" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+                {images.length === 0 && (
+                  <TouchableOpacity style={sellStyles.addPhotoBtn} onPress={() => Alert.alert("Upload Photo", "Where is your picture?", [{ text: "Open Camera", onPress: () => pickImage(true) }, { text: "Choose from Gallery", onPress: () => pickImage(false) }, { text: "Cancel", style: "cancel" }])}>
+                    <Camera size={32} color="#10B981" />
+                    <Text style={sellStyles.addPhotoText}>Add Photo</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </ScrollView>
+          )}
+
+          {step === 3 && (
+            <ScrollView contentContainerStyle={{ padding: 20 }}>
+              <Text style={sellStyles.inputLabel}>Ad Title *</Text>
+              <TextInput style={sellStyles.input} placeholder="e.g. Fresh Wheat 50kg bag" value={title} onChangeText={setTitle} placeholderTextColor="#94A3B8"/>
+
+              <Text style={sellStyles.inputLabel}>Selling Price (₹) *</Text>
+              <TextInput style={sellStyles.input} placeholder="e.g. 450" keyboardType="numeric" value={price} onChangeText={setPrice} placeholderTextColor="#94A3B8"/>
+
+              <Text style={sellStyles.inputLabel}>Description of Item</Text>
+              <TextInput style={[sellStyles.input, { height: 100, textAlignVertical: "top" }]} placeholder="Describe the quality, quantity, or condition of your item..." multiline value={description} onChangeText={setDescription} placeholderTextColor="#94A3B8"/>
+
+              <Text style={sellStyles.inputLabel}>Your Name *</Text>
+              <TextInput style={sellStyles.input} placeholder="e.g. Ramesh Kumar" value={sellerName} onChangeText={setSellerName} placeholderTextColor="#94A3B8"/>
+
+              <Text style={sellStyles.inputLabel}>City / Location *</Text>
+              <TextInput style={sellStyles.input} placeholder="e.g. Nashik, Maharashtra" value={location} onChangeText={setLocation} placeholderTextColor="#94A3B8"/>
+            </ScrollView>
+          )}
+        </KeyboardAvoidingView>
+
+        <View style={sellStyles.footer}>
+          {step > 1 && (
+            <TouchableOpacity style={sellStyles.backBtn} onPress={() => setStep((s) => s - 1)}>
+              <Text style={{ color: "#0F172A", fontWeight: "800" }}>Back</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={[sellStyles.nextBtn, step === 1 && !selectedCategory && { opacity: 0.5 }]}
+            disabled={(step === 1 && !selectedCategory) || posting}
+            onPress={() => step < 3 ? setStep((s) => s + 1) : handlePost()}
+          >
+            {posting ? <ActivityIndicator color="#fff" /> : <Text style={sellStyles.nextBtnText}>{step < 3 ? "Next" : "Post Item For Sale"}</Text>}
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     </Modal>
   );
 }
 
-export default function MarketScreen() {
-  const { addToCart, cartTotal } = useApp();
-  const [mCat, setMCat] = useState('all');
-  const [search, setSearch] = useState('');
-  const [selProd, setSelProd] = useState(null);
-  const [modalVisible, setModalVisible] = useState(false);
+// ─── MAIN MARKET SCREEN ──────────────────────────────────────────
+export default function Market() {
+  const router = useRouter();
+  const { t } = useTranslation();
+  const { addToCart, totalCount } = useCart();
+  const insets = useSafeAreaInsets();
 
-  const filtered = PRODS.filter(p => (mCat === 'all' || p.cat === mCat) && (!search || p.nm.toLowerCase().includes(search.toLowerCase())));
+  const [marketMode, setMarketMode] = useState('store'); // 'store' | 'olx'
+  const [searchQuery, setSearchQuery] = useState("");
 
-  function openProd(prod) { setSelProd(prod); setModalVisible(true); }
-  function handleAdd(prod, qty = 1) {
-    for (let i = 0; i < qty; i++) addToCart(prod);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-  }
+  // Store State (Firebase)
+  const [storeProducts, setStoreProducts] = useState([]);
+  const [storeCat, setStoreCat] = useState(null);
+  const [addedId, setAddedId] = useState(null);
 
-  return (
-    <View style={{ flex: 1, backgroundColor: Colors.bg }}>
-      {/* Header */}
-      <LinearGradient colors={[Colors.white, Colors.white]} style={styles.header}>
-        <SafeAreaView edges={['top']}>
-          <View style={styles.headerRow}>
-            <View style={styles.searchBar}>
-              <Text style={{ fontSize: 16, color: Colors.g400 }}>🔍</Text>
-              <TextInput style={styles.searchInput} value={search} onChangeText={setSearch} placeholder="Search products..." placeholderTextColor={Colors.g400} />
-              {search.length > 0 && (
-                <TouchableOpacity onPress={() => setSearch('')}><Text style={{ color: Colors.g400 }}>✕</Text></TouchableOpacity>
-              )}
-            </View>
-            <TouchableOpacity style={styles.cartIconBtn} onPress={() => router.push('/cart')}>
-              <Text style={{ fontSize: 22 }}>🛒</Text>
-              {cartTotal > 0 && (
-                <View style={styles.cartBadge}><Text style={styles.cartBadgeText}>{cartTotal}</Text></View>
-              )}
-            </TouchableOpacity>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catRow}>
-            {CATS.map(c => (
-              <TouchableOpacity key={c.v} style={[styles.catChip, mCat === c.v && styles.catChipOn]} onPress={() => setMCat(c.v)}>
-                <Text style={[styles.catText, mCat === c.v && { color: '#fff' }]}>{c.l}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </SafeAreaView>
-      </LinearGradient>
+  // OLX State (Supabase)
+  const [olxListings, setOlxListings] = useState([]);
+  const [olxCat, setOlxCat] = useState("All");
+  const [sellVisible, setSellVisible] = useState(false);
+  const [loadingOLX, setLoadingOLX] = useState(true);
 
-      {/* Govt banner */}
-      <View style={styles.govtBanner}>
-        <Text style={styles.govtBannerText}>🏛️ Govt incentive prices available on select products</Text>
-      </View>
+  // Fetch Firebase Store
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "products"));
+        setStoreProducts(querySnapshot.docs.map((doc) => ({
+          id: doc.id, name: doc.data().name ?? "Product", price: Number(doc.data().price) || 0,
+          image: doc.data().image ?? "", category: doc.data().category ?? "Uncategorized", description: doc.data().description ?? "",
+        })));
+      } catch (error) { console.log("Firebase Store Error:", error); }
+    };
+    fetchProducts();
+  }, []);
 
-      {/* Grid */}
-      <FlatList
-        data={filtered} keyExtractor={i => i.id}
-        numColumns={2}
-        contentContainerStyle={{ paddingHorizontal: 9, paddingTop: 4, paddingBottom: 90 }}
-        renderItem={({ item }) => <ProductCard prod={item} onAdd={handleAdd} onPress={openProd} />}
-        showsVerticalScrollIndicator={false}
-      />
+  // Fetch Supabase OLX Listings
+  const fetchOLXListings = async () => {
+    setLoadingOLX(true);
+    try {
+      const { data, error } = await supabase
+        .from('farmer_listings')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      <ProductModal
-        prod={selProd} visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        onAdd={handleAdd}
-        onBuy={() => router.push('/cart')}
-      />
-    </View>
+      if (error) throw error;
+      setOlxListings(data || []);
+    } catch (e) {
+      console.log("Supabase OLX Error:", e);
+    } finally {
+      setLoadingOLX(false);
+    }
+  };
+
+  useEffect(() => {
+    if (marketMode === 'olx') fetchOLXListings();
+  }, [marketMode]);
+
+  // Filters
+  const storeFiltered = storeProducts.filter(p =>
+    (storeCat ? p.category?.toLowerCase() === storeCat.toLowerCase() : true) &&
+    (p.name.toLowerCase().includes(searchQuery.toLowerCase()))
   );
-}
 
-// ── Cart Screen ───────────────────────────────────────────────
-export function CartScreen() {
-  const { cart, updateCartQty, removeFromCart, clearCart } = useApp();
-  const [ordered, setOrdered] = useState(false);
+  const olxFiltered = olxListings.filter(l =>
+    (olxCat !== "All" ? l.category?.toLowerCase() === olxCat.toLowerCase() : true) &&
+    (l.title?.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
-  const tot = cart.reduce((s, i) => s + i.pr * i.qty, 0);
-  const disc = cart.reduce((s, i) => s + (i.inc || 0) * i.qty, 0);
-
-  function placeOrder() {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setOrdered(true);
-    clearCart();
-    setTimeout(() => { setOrdered(false); router.back(); }, 2500);
-  }
-
-  if (ordered) {
-    return (
-      <View style={{ flex: 1, backgroundColor: Colors.bg, alignItems: 'center', justifyContent: 'center', gap: 16 }}>
-        <FadeIn style={{ alignItems: 'center', gap: 12 }}>
-          <Text style={{ fontSize: 72 }}>🎉</Text>
-          <Text style={{ fontFamily: Fonts.displayBold, fontSize: 24, color: Colors.g1 }}>Order Placed!</Text>
-          <Text style={{ fontFamily: Fonts.medium, fontSize: 14, color: Colors.g500 }}>Delivery in 3–5 working days</Text>
-        </FadeIn>
-      </View>
-    );
-  }
+  const handleAddToCart = (item) => {
+    addToCart(item);
+    setAddedId(item.id);
+    setTimeout(() => setAddedId(null), 800);
+  };
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.bg }}>
-      <LinearGradient colors={[Colors.g1, Colors.g2]} style={styles.cartHeader}>
-        <SafeAreaView edges={['top']}>
-          <View style={styles.cartHeaderRow}>
-            <TouchableOpacity onPress={() => router.back()}>
-              <Text style={{ color: 'rgba(255,255,255,.8)', fontSize: 22 }}>←</Text>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+
+      {/* ── UNIFIED HEADER ── */}
+      <LinearGradient colors={['#064E3B', '#10B981']} style={[styles.header, { paddingTop: insets.top > 0 ? insets.top : 40 }]}>
+        <View style={styles.topBar}>
+          <Text style={styles.headerTitle}>{t('market.shopTitle', 'Agro Market')}</Text>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <TouchableOpacity style={styles.glassBtn} onPress={() => router.push("/orders")}>
+              <Ionicons name="receipt-outline" size={20} color="#FFF" />
             </TouchableOpacity>
-            <Text style={styles.cartHeaderTitle}>My Cart ({cart.length})</Text>
-            <View style={{ width: 30 }} />
+            <TouchableOpacity style={styles.glassBtn} onPress={() => router.push("/cartAdd")}>
+              <Ionicons name="cart-outline" size={22} color="#FFF" />
+              {totalCount > 0 && <View style={styles.badge} />}
+            </TouchableOpacity>
           </View>
-        </SafeAreaView>
+        </View>
+
+        <View style={styles.toggleWrap}>
+          <TouchableOpacity style={[styles.toggleBtn, marketMode === 'store' && styles.toggleBtnActive]} onPress={() => {setMarketMode('store'); setSearchQuery("");}}>
+            <Text style={[styles.toggleText, marketMode === 'store' && styles.toggleTextActive]}>Agro Store</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.toggleBtn, marketMode === 'olx' && styles.toggleBtnActive]} onPress={() => {setMarketMode('olx'); setSearchQuery("");}}>
+            <Text style={[styles.toggleText, marketMode === 'olx' && styles.toggleTextActive]}>Local OLX</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.searchContainer}>
+          <Search size={18} color="rgba(255,255,255,0.7)" />
+          <TextInput
+            placeholder={marketMode === 'store' ? "Search seeds, tools..." : "Search local listings..."}
+            placeholderTextColor="rgba(255,255,255,0.7)"
+            style={styles.searchInput}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery("")}><X size={18} color="rgba(255,255,255,0.7)" /></TouchableOpacity>
+          )}
+        </View>
       </LinearGradient>
 
-      {cart.length === 0 ? (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-          <Text style={{ fontSize: 64 }}>🛒</Text>
-          <Text style={{ fontFamily: Fonts.extraBold, fontSize: 18, color: Colors.g700 }}>Your cart is empty</Text>
-          <PressScale onPress={() => router.back()}>
-            <LinearGradient colors={[Colors.g3, Colors.g1]} style={{ borderRadius: Radius.r99, paddingHorizontal: 24, paddingVertical: 13 }}>
-              <Text style={{ fontFamily: Fonts.extraBold, fontSize: 14, color: '#fff' }}>Browse Marketplace →</Text>
-            </LinearGradient>
-          </PressScale>
-        </View>
-      ) : (
-        <>
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {cart.map((item, i) => (
-              <FadeIn key={item.id} delay={i * 50} style={styles.cartItem}>
-                <View style={styles.cartItemImg}><Text style={{ fontSize: 28 }}>{item.emo}</Text></View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.cartItemName} numberOfLines={2}>{item.nm}</Text>
-                  <Text style={styles.cartItemLoc}>{item.sloc}</Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6 }}>
-                    <Text style={styles.cartItemPrice}>₹{item.pr}</Text>
-                    <View style={styles.qtyControl}>
-                      <TouchableOpacity style={styles.qtySmBtn} onPress={() => updateCartQty(item.id, -1)}><Text style={styles.qtyBtnText}>−</Text></TouchableOpacity>
-                      <Text style={styles.qtyNum}>{item.qty}</Text>
-                      <TouchableOpacity style={styles.qtySmBtn} onPress={() => updateCartQty(item.id, 1)}><Text style={styles.qtyBtnText}>+</Text></TouchableOpacity>
+      {/* ── CONDITIONAL BODY ── */}
+      {marketMode === 'store' ? (
+        <FlatList
+          data={storeFiltered}
+          keyExtractor={(item) => item.id}
+          numColumns={2}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          ListHeaderComponent={() => (
+            <View style={{ marginBottom: 10 }}>
+              <View style={styles.categoryWrapper}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
+                  <TouchableOpacity style={styles.catIconBox} onPress={() => setStoreCat(null)} activeOpacity={0.7}>
+                    <View style={[styles.catIconCircle, !storeCat && styles.catIconCircleActive]}>
+                      <Ionicons name="grid" size={24} color={!storeCat ? "#FFF" : "#064E3B"} />
                     </View>
+                    <Text style={[styles.catIconLabel, !storeCat && styles.catIconLabelActive]}>{t('market.all', 'All')}</Text>
+                  </TouchableOpacity>
+                  {STORE_CATEGORIES.map(cat => (
+                    <TouchableOpacity key={cat.id} style={styles.catIconBox} onPress={() => setStoreCat(cat.id)} activeOpacity={0.7}>
+                      <View style={[styles.catIconCircle, storeCat === cat.id && styles.catIconCircleActive]}>
+                        <Ionicons name={cat.icon} size={24} color={storeCat === cat.id ? "#FFF" : "#064E3B"} />
+                      </View>
+                      <Text style={[styles.catIconLabel, storeCat === cat.id && styles.catIconLabelActive]}>{t(`market.cat${cat.label}`, cat.label)}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+              <AdBanner />
+              <Text style={styles.sectionHeading}>{t('market.newProducts', 'Featured Products')}</Text>
+            </View>
+          )}
+          renderItem={({ item }) => (
+            <TouchableOpacity style={styles.card} onPress={() => router.push({ pathname: "/productDetail", params: item })} activeOpacity={0.9}>
+              <View style={styles.imgWrapper}>
+                {item.image ? <Image source={{ uri: item.image }} style={styles.cardImg} resizeMode="cover" /> : <View style={[styles.cardImg, { backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' }]}><ImageIcon size={32} color="#CBD5E1" /></View>}
+              </View>
+              <View style={styles.cardInfo}>
+                <Text style={styles.cardName} numberOfLines={2}>{item.name}</Text>
+                <Text style={styles.cardPrice}>₹{item.price.toFixed(2)}</Text>
+                <TouchableOpacity style={[styles.addBtn, addedId === item.id && styles.addedBtn]} onPress={() => handleAddToCart(item)} activeOpacity={0.8}>
+                  <Text style={[styles.addBtnText, addedId === item.id && styles.addedBtnText]}>{addedId === item.id ? t('market.added', 'Added ✓') : t('market.addToCart', 'Add to Cart')}</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          )}
+        />
+      ) : (
+        <View style={{ flex: 1 }}>
+          <FlatList
+            data={olxFiltered}
+            keyExtractor={(item) => item.id}
+            numColumns={2}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            ListHeaderComponent={() => (
+              <View style={{ marginBottom: 10 }}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10, gap: 10 }}>
+                  <TouchableOpacity style={[olxStyles.catChip, olxCat === "All" && olxStyles.catChipActive]} onPress={() => setOlxCat("All")}>
+                    <Search size={14} color={olxCat === "All" ? "#FFF" : "#059669"} />
+                    <Text style={[olxStyles.catChipText, olxCat === "All" && { color: "#FFF" }]}>All</Text>
+                  </TouchableOpacity>
+                  {OLX_CATEGORIES.map((cat) => (
+                    <TouchableOpacity key={cat.label} style={[olxStyles.catChip, olxCat === cat.label && olxStyles.catChipActive]} onPress={() => setOlxCat(cat.label)}>
+                      {React.cloneElement(cat.icon, { color: olxCat === cat.label ? "#FFF" : "#059669", size: 14 })}
+                      <Text style={[olxStyles.catChipText, olxCat === cat.label && { color: "#FFF" }]}>{cat.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+                <Text style={[styles.sectionHeading, { marginLeft: 16 }]}>Local Listings</Text>
+              </View>
+            )}
+            renderItem={({ item }) => (
+              <TouchableOpacity style={styles.card} onPress={() => router.push({ pathname: "/listingDetail", params: { id: item.id }})} activeOpacity={0.9}>
+                <View style={[styles.imgWrapper, { height: 140, padding: 0 }]}>
+                  {item.image_url ? <Image source={{ uri: item.image_url }} style={{ width: '100%', height: '100%' }} resizeMode="cover" /> : <View style={{ flex: 1, backgroundColor: '#F8FAFC', justifyContent: 'center', alignItems: 'center' }}><ImageIcon size={32} color="#94A3B8" /></View>}
+                  <TouchableOpacity style={{ position: 'absolute', top: 10, right: 10, backgroundColor: 'rgba(255,255,255,0.9)', padding: 6, borderRadius: 15 }}><Heart size={16} color="#64748B" /></TouchableOpacity>
+                </View>
+                <View style={styles.cardInfo}>
+                  <Text style={styles.cardPrice}>₹{(item.price || 0).toLocaleString("en-IN")}</Text>
+                  <Text style={[styles.cardName, { color: '#475569', fontWeight: '500', marginTop: 4 }]} numberOfLines={2}>{item.title}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 4 }}>
+                    <MapPin size={12} color="#94A3B8" />
+                    <Text style={{ fontSize: 11, color: "#94A3B8", fontWeight: '600' }}>{item.location}</Text>
                   </View>
                 </View>
-                <TouchableOpacity onPress={() => removeFromCart(item.id)} style={{ padding: 8 }}>
-                  <Text style={{ fontSize: 18, color: Colors.g400 }}>✕</Text>
-                </TouchableOpacity>
-              </FadeIn>
-            ))}
-            {/* Summary */}
-            <View style={styles.summary}>
-              <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Subtotal</Text><Text style={styles.summaryVal}>₹{tot.toFixed(0)}</Text></View>
-              {disc > 0 && <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Govt Incentive</Text><Text style={[styles.summaryVal, { color: Colors.g3 }]}>−₹{disc.toFixed(0)}</Text></View>}
-              <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Delivery</Text><Text style={[styles.summaryVal, { color: Colors.g3 }]}>Free</Text></View>
-              <View style={[styles.summaryRow, styles.summaryTotal]}>
-                <Text style={styles.totalLabel}>Total</Text>
-                <Text style={styles.totalVal}>₹{(tot - disc).toFixed(0)}</Text>
+              </TouchableOpacity>
+            )}
+            ListEmptyComponent={
+              loadingOLX ? <ActivityIndicator size="large" color="#10B981" style={{ marginTop: 50 }} /> :
+              <View style={{ alignItems: 'center', marginTop: 50 }}>
+                <Leaf size={48} color="#CBD5E1" />
+                <Text style={{ marginTop: 10, color: '#64748B', fontWeight: '600' }}>No local listings found.</Text>
               </View>
-            </View>
-            <View style={{ height: 110 }} />
-          </ScrollView>
-          <View style={styles.checkoutBar}>
-            <PressScale style={{ flex: 1 }} onPress={placeOrder}>
-              <LinearGradient colors={[Colors.g4, Colors.g1]} style={styles.checkoutBtn}>
-                <Text style={styles.checkoutBtnText}>Place Order · ₹{(tot - disc).toFixed(0)} →</Text>
-              </LinearGradient>
-            </PressScale>
-          </View>
-        </>
+            }
+          />
+
+          <TouchableOpacity style={olxStyles.floatingAddBtn} onPress={() => setSellVisible(true)} activeOpacity={0.9}>
+            <LinearGradient colors={['#10B981', '#059669']} style={olxStyles.fabCircle}>
+              <Plus size={32} color="#FFF" />
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
       )}
+
+      {/* SELL MODAL (Trigger success refresh when closed) */}
+      <SellModal visible={sellVisible} onClose={() => setSellVisible(false)} onSuccess={fetchOLXListings}/>
     </View>
   );
 }
 
+// ── STYLES ──
 const styles = StyleSheet.create({
-  header: { borderBottomWidth: 1, borderBottomColor: Colors.g100 },
-  headerRow: { flexDirection:'row', alignItems:'center', gap:10, paddingHorizontal:14, paddingTop:8, paddingBottom:6 },
-  searchBar: { flex:1, flexDirection:'row', alignItems:'center', gap:8, backgroundColor:Colors.g100, borderRadius:Radius.r99, paddingHorizontal:14, paddingVertical:9 },
-  searchInput: { flex:1, fontSize:13, fontFamily:Fonts.bold, color:Colors.g900 },
-  cartIconBtn: { position:'relative', padding:4 },
-  cartBadge: { position:'absolute', top:0, right:0, width:16, height:16, backgroundColor:Colors.red, borderRadius:8, alignItems:'center', justifyContent:'center' },
-  cartBadgeText: { fontFamily:Fonts.black, fontSize:9, color:'#fff' },
-  catRow: { paddingHorizontal:14, gap:7, paddingBottom:10 },
-  catChip: { paddingHorizontal:13, paddingVertical:6, borderRadius:Radius.r99, borderWidth:2, borderColor:Colors.g200, backgroundColor:Colors.white },
-  catChipOn: { backgroundColor:Colors.g1, borderColor:Colors.g1 },
-  catText: { fontFamily:Fonts.extraBold, fontSize:12, color:Colors.g500 },
-  govtBanner: { backgroundColor:Colors.amberp, paddingHorizontal:14, paddingVertical:7 },
-  govtBannerText: { fontFamily:Fonts.bold, fontSize:12, color:'#92600a' },
-  prodCard: { backgroundColor:Colors.white, borderRadius:Radius.r16, overflow:'hidden', ...Shadows.sh1 },
-  prodImg: { height:110, backgroundColor:Colors.g50, alignItems:'center', justifyContent:'center', position:'relative' },
-  addBtn: { position:'absolute', bottom:7, left:7, right:7, backgroundColor:Colors.g1, borderRadius:Radius.r99, paddingVertical:6, alignItems:'center' },
-  addBtnText: { fontFamily:Fonts.extraBold, fontSize:11, color:'#fff' },
-  prodInfo: { padding:9, gap:2 },
-  prodName: { fontFamily:Fonts.extraBold, fontSize:12, color:Colors.g900, lineHeight:17 },
-  prodPrice: { fontFamily:Fonts.black, fontSize:15, color:Colors.g2 },
-  prodMrp: { fontFamily:Fonts.bold, fontSize:11, color:Colors.g400, textDecorationLine:'line-through' },
-  prodInc: { fontFamily:Fonts.extraBold, fontSize:10, color:Colors.red },
-  prodLoc: { fontFamily:Fonts.medium, fontSize:10, color:Colors.g400 },
-  overlay: { flex:1, backgroundColor:'rgba(0,0,0,.5)' },
-  prodModal: { backgroundColor:Colors.white, borderTopLeftRadius:28, borderTopRightRadius:28, maxHeight:'88%', ...Shadows.sh3 },
-  sheetHandle: { width:36, height:4, backgroundColor:Colors.g200, borderRadius:2, alignSelf:'center', marginTop:10, marginBottom:2 },
-  prodModalImg: { height:200, backgroundColor:Colors.g50, alignItems:'center', justifyContent:'center' },
-  prodModalName: { fontFamily:Fonts.black, fontSize:18, color:Colors.g900, lineHeight:25 },
-  prodModalPrice: { fontFamily:Fonts.black, fontSize:26, color:Colors.g2 },
-  prodModalLoc: { fontFamily:Fonts.medium, fontSize:12, color:Colors.g400 },
-  prodModalDesc: { fontFamily:Fonts.medium, fontSize:13.5, color:Colors.g500, lineHeight:21 },
-  featWrap: { flexDirection:'row', flexWrap:'wrap', gap:6 },
-  featChip: { backgroundColor:Colors.gp, borderRadius:Radius.r99, paddingHorizontal:11, paddingVertical:4 },
-  featText: { fontFamily:Fonts.extraBold, fontSize:11, color:Colors.g2 },
-  qtyRow: { flexDirection:'row', alignItems:'center', justifyContent:'space-between' },
-  qtyControl: { flexDirection:'row', alignItems:'center', borderWidth:2, borderColor:Colors.g200, borderRadius:Radius.r99, overflow:'hidden' },
-  qtyBtn: { width:34, height:34, backgroundColor:Colors.g50, alignItems:'center', justifyContent:'center' },
-  qtySmBtn: { width:28, height:28, backgroundColor:Colors.g50, alignItems:'center', justifyContent:'center' },
-  qtyBtnText: { fontFamily:Fonts.bold, fontSize:18, color:Colors.g700 },
-  qtyNum: { width:34, textAlign:'center', fontFamily:Fonts.black, fontSize:14, color:Colors.g900 },
-  ctaRow: { flexDirection:'row', gap:10 },
-  cartBtn: { flex:1, backgroundColor:Colors.gp, borderRadius:Radius.r99, paddingVertical:13, alignItems:'center', borderWidth:2, borderColor:Colors.g5 },
-  cartBtnText: { fontFamily:Fonts.extraBold, fontSize:14, color:Colors.g1 },
-  buyBtn: { borderRadius:Radius.r99, paddingVertical:14, alignItems:'center' },
-  buyBtnText: { fontFamily:Fonts.black, fontSize:14, color:'#fff' },
-  cartHeader: { paddingBottom:16 },
-  cartHeaderRow: { flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingHorizontal:16, paddingTop:10 },
-  cartHeaderTitle: { fontFamily:Fonts.black, fontSize:18, color:'#fff' },
-  cartItem: { flexDirection:'row', alignItems:'flex-start', gap:12, padding:14, backgroundColor:Colors.white, borderBottomWidth:1, borderBottomColor:Colors.g100 },
-  cartItemImg: { width:56, height:56, backgroundColor:Colors.g100, borderRadius:Radius.r12, alignItems:'center', justifyContent:'center' },
-  cartItemName: { fontFamily:Fonts.extraBold, fontSize:13, color:Colors.g900, lineHeight:18 },
-  cartItemLoc: { fontFamily:Fonts.medium, fontSize:11, color:Colors.g400, marginTop:2 },
-  cartItemPrice: { fontFamily:Fonts.black, fontSize:15, color:Colors.g2 },
-  summary: { backgroundColor:Colors.white, borderTopWidth:1, borderTopColor:Colors.g200, padding:16, gap:8 },
-  summaryRow: { flexDirection:'row', justifyContent:'space-between' },
-  summaryLabel: { fontFamily:Fonts.bold, fontSize:13, color:Colors.g500 },
-  summaryVal: { fontFamily:Fonts.extraBold, fontSize:13, color:Colors.g500 },
-  summaryTotal: { borderTopWidth:1, borderTopColor:Colors.g200, paddingTop:10, marginTop:4 },
-  totalLabel: { fontFamily:Fonts.black, fontSize:16, color:Colors.g900 },
-  totalVal: { fontFamily:Fonts.black, fontSize:16, color:Colors.g1 },
-  checkoutBar: { position:'absolute', bottom:0, left:0, right:0, padding:16, backgroundColor:Colors.white, borderTopWidth:1, borderTopColor:Colors.g100 },
-  checkoutBtn: { borderRadius:Radius.r99, paddingVertical:16, alignItems:'center', ...Shadows.sh2 },
-  checkoutBtnText: { fontFamily:Fonts.black, fontSize:15, color:'#fff', letterSpacing:0.3 },
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  header: { paddingBottom: 20, borderBottomLeftRadius: 32, borderBottomRightRadius: 32, elevation: 8, shadowColor: "#064E3B", shadowOpacity: 0.2, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, zIndex: 10 },
+  topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 15 },
+  headerTitle: { fontSize: 26, fontWeight: '900', color: '#FFF' },
+  glassBtn: { width: 44, height: 44, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  badge: { position: 'absolute', top: 10, right: 10, width: 10, height: 10, backgroundColor: '#FDE047', borderRadius: 5, borderWidth: 2, borderColor: '#064E3B' },
+
+  toggleWrap: { flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.2)', marginHorizontal: 20, borderRadius: 16, padding: 4, marginBottom: 15 },
+  toggleBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 12 },
+  toggleBtnActive: { backgroundColor: '#FFF', elevation: 2 },
+  toggleText: { color: 'rgba(255,255,255,0.8)', fontWeight: '700', fontSize: 14 },
+  toggleTextActive: { color: '#064E3B', fontWeight: '900' },
+
+  searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.15)', marginHorizontal: 20, paddingHorizontal: 16, borderRadius: 16, height: 50 },
+  searchInput: { flex: 1, marginLeft: 12, color: '#FFF', fontSize: 15, fontWeight: "600" },
+
+  listContent: { paddingHorizontal: 10, paddingTop: 15, paddingBottom: 100 },
+  sectionHeading: { fontSize: 16, fontWeight: "800", color: "#0F172A", marginTop: 5, marginBottom: 12, marginLeft: 5, letterSpacing: 0.5 },
+
+  categoryWrapper: { marginTop: 0, marginBottom: 20 },
+  categoryScroll: { paddingHorizontal: 5, paddingTop: 5 },
+  catIconBox: { alignItems: 'center', marginRight: 20 },
+  catIconCircle: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#FFF', justifyContent: 'center', alignItems: 'center', elevation: 3, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 3 }, marginBottom: 8, borderWidth: 1, borderColor: '#F1F5F9' },
+  catIconCircleActive: { backgroundColor: '#10B981', borderColor: '#10B981' },
+  catIconLabel: { fontSize: 12, fontWeight: '700', color: '#64748B' },
+  catIconLabelActive: { color: '#064E3B', fontWeight: '900' },
+
+  card: { flex: 1, backgroundColor: '#FFF', margin: 6, borderRadius: 24, overflow: "hidden", elevation: 2, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, borderWidth: 1, borderColor: '#F1F5F9' },
+  imgWrapper: { padding: 10 },
+  cardImg: { width: '100%', height: 130, borderRadius: 16 },
+  cardInfo: { paddingHorizontal: 14, paddingBottom: 14 },
+  cardName: { fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 6, lineHeight: 18 },
+  cardPrice: { fontSize: 16, fontWeight: '900', color: '#10B981' },
+  addBtn: { marginTop: 12, backgroundColor: '#F1F5F9', paddingVertical: 10, borderRadius: 14, alignItems: 'center' },
+  addedBtn: { backgroundColor: '#059669' },
+  addBtnText: { fontSize: 13, fontWeight: '800', color: '#0F172A' },
+  addedBtnText: { color: "#FFF" }
+});
+
+const adStyles = StyleSheet.create({
+  wrapper: { marginBottom: 20, marginTop: 5, paddingHorizontal: 5 },
+  sectionTitle: { fontSize: 16, fontWeight: "800", color: "#0F172A", marginBottom: 12, letterSpacing: 0.5 },
+  card: { width: SCREEN_WIDTH * 0.8, height: 160, borderRadius: 24, marginRight: 15, overflow: "hidden", flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, elevation: 4 },
+  circle: { position: "absolute", width: 140, height: 140, borderRadius: 70, backgroundColor: "rgba(255,255,255,0.06)", top: -40, right: -30 },
+  cardContent: { flex: 1, zIndex: 2 },
+  badgePill: { alignSelf: "flex-start", borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 10 },
+  badgeText: { fontSize: 9, fontWeight: "900", letterSpacing: 0.8, textTransform: "uppercase" },
+  cardTitle: { color: "white", fontSize: 18, fontWeight: "900", marginBottom: 4 },
+  cardSubtitle: { color: "rgba(255,255,255,0.9)", fontSize: 12, marginBottom: 16, lineHeight: 18, fontWeight: "500" },
+  shopBtn: { alignSelf: "flex-start", backgroundColor: "white", borderRadius: 16, paddingHorizontal: 16, paddingVertical: 8, elevation: 2 },
+  shopBtnText: { fontSize: 12, fontWeight: "800", color: "#0F172A" },
+  iconBox: { zIndex: 2, marginLeft: 10 },
+});
+
+const olxStyles = StyleSheet.create({
+  catChip: { flexDirection: "row", alignItems: "center", backgroundColor: "#ECFDF5", borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: '#D1FAE5' },
+  catChipActive: { backgroundColor: "#10B981", borderColor: '#10B981' },
+  catChipText: { fontSize: 13, color: "#059669", fontWeight: "700", marginLeft: 6 },
+
+  floatingAddBtn: { position: "absolute", bottom: 100, right: 25, elevation: 12, shadowColor: "#10B981", shadowOpacity: 0.4, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
+  fabCircle: { width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center' },
+});
+
+const sellStyles = StyleSheet.create({
+  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: "#F1F5F9" },
+  iconBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 20 },
+  headerTitle: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: "900", color: "#0F172A" },
+  stepRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 20 },
+  stepWrap: { flexDirection: "row", alignItems: "center" },
+  stepDot: { width: 32, height: 32, borderRadius: 16, backgroundColor: "#F1F5F9", justifyContent: "center", alignItems: "center" },
+  stepDotActive: { backgroundColor: "#10B981" },
+  stepNum: { fontSize: 14, fontWeight: "800", color: "#94A3B8" },
+  stepLine: { width: 40, height: 3, backgroundColor: "#F1F5F9", marginHorizontal: 6, borderRadius: 2 },
+  stepLineActive: { backgroundColor: "#10B981" },
+  catGrid: { flexDirection: "row", flexWrap: "wrap", padding: 20, gap: 15 },
+  catCard: { width: (SCREEN_WIDTH - 55) / 3, aspectRatio: 1, backgroundColor: "#F8FAFC", borderRadius: 20, justifyContent: "center", alignItems: "center", borderWidth: 2, borderColor: "transparent" },
+  catCardSelected: { backgroundColor: "#10B981", borderColor: "#059669" },
+  catLabel: { fontSize: 13, color: "#0F172A", fontWeight: "700", marginTop: 10 },
+  photoHint: { color: "#64748B", fontSize: 13, marginBottom: 15, fontWeight: '500' },
+  photoGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  photoThumb: { width: (SCREEN_WIDTH - 64) / 3, aspectRatio: 1, borderRadius: 16, backgroundColor: "#F1F5F9" },
+  coverBadge: { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(16, 185, 129, 0.9)", padding: 4, alignItems: "center", borderBottomLeftRadius: 16, borderBottomRightRadius: 16 },
+  removeBtn: { position: "absolute", top: -5, right: -5, backgroundColor: "#FFF", borderRadius: 12, padding: 2, elevation: 2 },
+  addPhotoBtn: { width: (SCREEN_WIDTH - 64) / 3, aspectRatio: 1, borderRadius: 16, borderWidth: 2, borderColor: "#D1FAE5", borderStyle: "dashed", justifyContent: "center", alignItems: "center", backgroundColor: "#ECFDF5" },
+  addPhotoText: { color: "#059669", fontSize: 12, marginTop: 6, fontWeight: "700" },
+  inputLabel: { fontSize: 13, color: "#64748B", fontWeight: "800", marginBottom: 8, marginTop: 16, textTransform: 'uppercase', letterSpacing: 0.5 },
+  input: { borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 16, padding: 16, fontSize: 16, color: "#0F172A", backgroundColor: "#F8FAFC", fontWeight: '500' },
+  footer: { flexDirection: "row", padding: 20, borderTopWidth: 1, borderTopColor: "#F1F5F9", gap: 12, backgroundColor: '#FFF' },
+  backBtn: { flex: 1, backgroundColor: "#F1F5F9", borderRadius: 16, alignItems: "center", justifyContent: 'center', height: 56 },
+  nextBtn: { flex: 2, backgroundColor: "#10B981", borderRadius: 16, alignItems: "center", justifyContent: 'center', height: 56 },
+  nextBtnText: { color: "#fff", fontWeight: "900", fontSize: 16 },
 });

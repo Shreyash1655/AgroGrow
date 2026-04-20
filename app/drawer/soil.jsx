@@ -1,1 +1,1 @@
-export { default } from './soilAdvisor';
+export { default } from '../soilAdvisor';

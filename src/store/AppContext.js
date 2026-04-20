@@ -1,5 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Session, UserStore, ApiKeyStore } from '../utils/store';
+// 1. Import your supabase client
+import { supabase } from '../utils/store';
 
 const AppContext = createContext(null);
 
@@ -23,6 +25,9 @@ export function AppProvider({ children }) {
           setLat(u.lat || 15.4909);
           setLng(u.lng || 73.8278);
           setLocName(u.locName || u.taluka + ', Goa');
+
+          // 2. Optional: Pull fresh data from Supabase on startup to keep it synced
+          refreshUserFromSupabase(u.phone);
         }
       }
       const key = await ApiKeyStore.get();
@@ -31,12 +36,54 @@ export function AppProvider({ children }) {
     })();
   }, []);
 
+  // 3. NEW: Function to push local state to Supabase
+  async function syncUserToSupabase(userData) {
+    try {
+      const { error } = await supabase
+        .from('farmers')
+        .upsert({
+          phone: userData.phone, // Using phone as unique identifier
+          name: userData.name,
+          taluka: userData.taluka,
+          farm_size: userData.farmSize,
+          soil_type: userData.soil,
+          crops: userData.crops,
+          last_online: new Date()
+        }, { onConflict: 'phone' }); // If phone exists, update. If not, insert.
+
+      if (error) throw error;
+      console.log("📊 Supabase Sync Successful");
+    } catch (err) {
+      console.error("📊 Supabase Sync Failed:", err.message);
+    }
+  }
+
+  // 4. NEW: Function to pull latest data from Supabase
+  async function refreshUserFromSupabase(phone) {
+    const { data, error } = await supabase
+      .from('farmers')
+      .select('*')
+      .eq('phone', phone)
+      .single();
+
+    if (data && !error) {
+       setUser(prev => ({ ...prev, ...data }));
+       await UserStore.set(phone, { ...user, ...data });
+    }
+  }
+
   async function login(u) {
     setUser(u);
     setLat(u.lat || 15.4909);
     setLng(u.lng || 73.8278);
     setLocName(u.locName || u.taluka + ', Goa');
+
+    // Save locally
     await Session.set(u.phone);
+    await UserStore.set(u.phone, u);
+
+    // 5. TRIGGER SYNC: Push to Supabase immediately on login/registration
+    await syncUserToSupabase(u);
   }
 
   async function logout() {
@@ -51,6 +98,7 @@ export function AppProvider({ children }) {
     await ApiKeyStore.set(key);
   }
 
+  /* ─── Cart Logic (Stays Local) ─── */
   function addToCart(prod) {
     setCart(c => {
       const ex = c.find(x => x.id === prod.id);
@@ -68,7 +116,6 @@ export function AppProvider({ children }) {
   }
 
   function clearCart() { setCart([]); }
-
   const cartTotal = cart.reduce((s, i) => s + i.qty, 0);
 
   return (
@@ -80,6 +127,7 @@ export function AppProvider({ children }) {
       locName, setLocName,
       cart, addToCart, updateCartQty, removeFromCart, clearCart, cartTotal,
       ready,
+      syncUserToSupabase // Exporting this so you can call it from Profile too
     }}>
       {children}
     </AppContext.Provider>

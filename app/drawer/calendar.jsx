@@ -6,7 +6,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { useApp } from '../src/store/AppContext';
+import { useApp } from '../../src/store/AppContext';
 
 /* ─── Constants ─────────────────────────────────────────── */
 const MONTHS = ['January','February','March','April','May','June',

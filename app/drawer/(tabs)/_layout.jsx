@@ -1,11 +1,13 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Dimensions, Platform } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
-import { useApp } from '../../src/store/AppContext';
+
+// 🔥 PATH FIX: Now 3 levels up to reach src
+import { useApp } from '../../../src/store/AppContext';
 
 const { width } = Dimensions.get('window');
 
@@ -17,13 +19,13 @@ function NavIcon({ name, focused }) {
   useEffect(() => {
     Animated.parallel([
       Animated.spring(scale, {
-        toValue: focused ? 1.15 : 1,
+        toValue: focused ? 1.12 : 1,
         tension: 300,
         friction: 15,
         useNativeDriver: true
       }),
       Animated.spring(translateY, {
-        toValue: focused ? -4 : 0,
+        toValue: focused ? -2 : 0,
         tension: 300,
         friction: 15,
         useNativeDriver: true
@@ -38,8 +40,9 @@ function NavIcon({ name, focused }) {
     profile:   { active: 'person', inactive: 'person-outline' },
   };
 
+  // Modern Green accent for active, soft slate for inactive
   const activeColor = '#10B981';
-  const inactiveColor = '#64748B';
+  const inactiveColor = '#94A3B8'; // Lighter grey for white background
 
   if (name === 'chatbot') {
     return (
@@ -67,13 +70,9 @@ function TabBar({ state, navigation }) {
   const insets = useSafeAreaInsets();
   const { cartTotal } = useApp();
 
-  // 🔥 THE FIX: Get the current active route name
+  // Identify current route to hide bar on chatbot
   const currentRoute = state.routes[state.index].name;
-
-  // 🔥 If the user is on the chatbot screen, return null to hide the bar
-  if (currentRoute === 'chatbot') {
-    return null;
-  }
+  if (currentRoute === 'chatbot') return null;
 
   const tabs = [
     { name: 'home', label: 'Home' },
@@ -84,10 +83,10 @@ function TabBar({ state, navigation }) {
   ];
 
   return (
-    <View style={[styles.navContainer, { bottom: insets.bottom > 0 ? insets.bottom : 20 }]}>
+    // Adjust bottom positioning based on safe area
+    <View style={[styles.navContainer, { bottom: insets.bottom > 0 ? insets.bottom : 15 }]}>
       <View style={styles.navBar}>
         {tabs.map((tab, i) => {
-          // Identify if the tab is focused based on state index
           const isFocused = state.index === i;
 
           const onPress = () => {
@@ -105,24 +104,14 @@ function TabBar({ state, navigation }) {
 
           if (tab.isCenter) {
             return (
-              <TouchableOpacity
-                key={tab.name}
-                onPress={onPress}
-                activeOpacity={0.9}
-                style={styles.centerTabContainer}
-              >
+              <TouchableOpacity key={tab.name} onPress={onPress} activeOpacity={0.9} style={styles.centerTabContainer}>
                 <NavIcon name="chatbot" focused={isFocused} />
               </TouchableOpacity>
             );
           }
 
           return (
-            <TouchableOpacity
-              key={tab.name}
-              onPress={onPress}
-              activeOpacity={0.7}
-              style={styles.tabItem}
-            >
+            <TouchableOpacity key={tab.name} onPress={onPress} activeOpacity={0.7} style={styles.tabItem}>
               <View>
                 <NavIcon name={tab.name} focused={isFocused} />
                 {tab.name === 'market' && cartTotal > 0 && (
@@ -131,11 +120,7 @@ function TabBar({ state, navigation }) {
                   </View>
                 )}
               </View>
-              {tab.label && (
-                <Text style={[styles.tabLabel, isFocused && styles.tabLabelOn]}>
-                  {tab.label}
-                </Text>
-              )}
+              {tab.label && <Text style={[styles.tabLabel, isFocused && styles.tabLabelOn]}>{tab.label}</Text>}
             </TouchableOpacity>
           );
         })}
@@ -147,7 +132,14 @@ function TabBar({ state, navigation }) {
 /* ─── Main Layout ───────────────────────────────────────── */
 export default function TabsLayout() {
   return (
-    <Tabs tabBar={props => <TabBar {...props} />} screenOptions={{ headerShown: false }}>
+    <Tabs
+        tabBar={props => <TabBar {...props} />}
+        screenOptions={{
+            headerShown: false,
+            // Ensure screens have a white background
+            sceneContainerStyle: { backgroundColor: '#FFFFFF' }
+        }}
+    >
       <Tabs.Screen name="home" />
       <Tabs.Screen name="community" />
       <Tabs.Screen name="chatbot" />
@@ -158,31 +150,46 @@ export default function TabsLayout() {
 }
 
 const styles = StyleSheet.create({
-  navContainer: { position: 'absolute', left: 20, right: 20, alignItems: 'center' },
+  navContainer: { position: 'absolute', left: 16, right: 16, alignItems: 'center', zIndex: 100 },
   navBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#111827',
+    backgroundColor: '#FFFFFF', // 🟢 MADE WHITE
     borderRadius: 36,
     height: 72,
     width: '100%',
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
+    // Shadows adjusted for light background
     shadowColor: '#000',
-    shadowOpacity: 0.35,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 15,
-    borderTopWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    shadowOpacity: 0.1,
+    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 10,
+    borderWidth: 1, // Full border looks cleaner in white
+    borderColor: '#F1F5F9', // Very subtle border color
   },
   tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center', height: '100%' },
-  tabLabel: { fontSize: 10, fontWeight: '700', color: '#64748B', marginTop: 4 },
+  tabLabel: { fontSize: 10, fontWeight: '700', color: '#94A3B8', marginTop: 4 }, // Lighter grey for label
   tabLabelOn: { color: '#10B981', fontWeight: '800' },
   activeDot: { width: 4, height: 4, borderRadius: 2, marginTop: 4, position: 'absolute', bottom: -10 },
   centerTabContainer: { width: 68, alignItems: 'center', justifyContent: 'flex-start', height: 90, transform: [{ translateY: -18 }] },
-  centerBotWrap: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#111827', padding: 6, elevation: 8 },
-  botGrad: { width: '100%', height: '100%', borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
-  badge: { position: 'absolute', top: -6, right: -10, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#111827' },
+  // Wrap around the center button is white, adds padding before gradient starts
+  centerBotWrap: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: '#FFFFFF', // 🟢 MADE WHITE
+    padding: 7,
+    // Soft shadow for the center button
+    shadowColor: '#059669',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 10
+  },
+  botGrad: { width: '100%', height: '100%', borderRadius: 27, alignItems: 'center', justifyContent: 'center' },
+  // Badge border updated to match white background
+  badge: { position: 'absolute', top: -6, right: -10, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFFFFF' },
   badgeText: { fontSize: 9, fontWeight: '800', color: '#FFFFFF' },
 });

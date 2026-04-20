@@ -2,13 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Image, ActivityIndicator,
-  KeyboardAvoidingView, Platform, Keyboard, StatusBar
+  KeyboardAvoidingView, Platform, Keyboard, StatusBar, Alert
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useApp } from '../../src/store/AppContext';
+import { useApp } from '../../../src/store/AppContext';
 
 // ─────────────────────────────────────────────────────
 // API KEYS
@@ -515,6 +515,10 @@ export default function ChatbotScreen() {
   const [messages, setMessages] = useState([
     { id: '0', role: 'bot', text: PRELOADED[user?.lang || 'en']?.greeting || PRELOADED.en.greeting },
   ]);
+
+  // NEW STATE: Temporarily holds the image before sending
+  const [stagedImage, setStagedImage] = useState(null);
+
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -526,18 +530,53 @@ export default function ChatbotScreen() {
     setMessages([{ id: Date.now().toString(), role: 'bot', text: PRELOADED[l]?.greeting || PRELOADED.en.greeting }]);
   }
 
-  async function handleSend(text = input, imageUri = null, imageBase64 = null) {
-    const trimmed = (text || '').trim();
-    if (!trimmed && !imageUri) return;
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Please allow camera roll access to upload photos of your crops.');
+      return;
+    }
+
+    try {
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        base64: true,
+        quality: 0.6,
+      });
+
+      if (!res.canceled && res.assets && res.assets.length > 0) {
+        // FIXED: Instead of sending immediately, we stage the image in state
+        setStagedImage({
+            uri: res.assets[0].uri,
+            base64: res.assets[0].base64
+        });
+      }
+    } catch (error) {
+      console.error("ImagePicker Error:", error);
+      Alert.alert('Error', 'Could not load the image. Please try again.');
+    }
+  };
+
+  // FIXED: handleSend now uses the stagedImage state AND the text input
+  async function handleSend() {
+    const trimmed = input.trim();
+    const hasImage = !!stagedImage;
+
+    if (!trimmed && !hasImage) return; // Don't send if totally empty
+
+    const imageUri = hasImage ? stagedImage.uri : null;
+    const imageBase64 = hasImage ? stagedImage.base64 : null;
 
     const userMsg = {
       id: Date.now().toString(),
       role: 'user',
       text: trimmed || 'Analyzing photo...',
-      image: imageUri || null,
+      image: imageUri,
     };
+
     setMessages(prev => [...prev, userMsg]);
     setInput('');
+    setStagedImage(null); // Clear the preview image after sending
     setLoading(true);
     Keyboard.dismiss();
 
@@ -629,14 +668,19 @@ export default function ChatbotScreen() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
       >
         <View style={[styles.inputContainer, { paddingBottom: insets.bottom + 10 }]}>
+
+          {/* FIXED: STAGED IMAGE PREVIEW UI */}
+          {stagedImage && (
+            <View style={styles.previewContainer}>
+              <Image source={{ uri: stagedImage.uri }} style={styles.previewImage} />
+              <TouchableOpacity onPress={() => setStagedImage(null)} style={styles.removePreviewBtn}>
+                <Ionicons name="close-circle" size={24} color="#EF4444" />
+              </TouchableOpacity>
+            </View>
+          )}
+
           <View style={styles.inputPill}>
-            <TouchableOpacity
-              onPress={async () => {
-                const res = await ImagePicker.launchImageLibraryAsync({ base64: true, quality: 0.6 });
-                if (!res.canceled) handleSend('', res.assets[0].uri, res.assets[0].base64);
-              }}
-              style={styles.cameraBtn}
-            >
+            <TouchableOpacity onPress={pickImage} style={styles.cameraBtn}>
               <Ionicons name="camera-outline" size={24} color="#64748B" />
             </TouchableOpacity>
 
@@ -669,7 +713,7 @@ export default function ChatbotScreen() {
 }
 
 // ─────────────────────────────────────────────────────
-// STYLES — exact same as pasted UI code
+// STYLES
 // ─────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   mainContainer:   { flex: 1, backgroundColor: '#F8FAFC' },
@@ -701,4 +745,26 @@ const styles = StyleSheet.create({
   sendBtn:         { width: 46, height: 46, borderRadius: 23, overflow: 'hidden' },
   sendBtnGrad:     { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
   msgImage:        { width: 220, height: 160, borderRadius: 18, marginBottom: 10 },
+
+  // FIXED: New styles for the image preview
+  previewContainer: {
+    position: 'relative',
+    marginHorizontal: 10,
+    marginBottom: 12,
+    alignSelf: 'flex-start',
+  },
+  previewImage: {
+    width: 70,
+    height: 70,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#10B981',
+  },
+  removePreviewBtn: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+  },
 });
