@@ -1,115 +1,112 @@
-# 🌱 AgroGROW — React Native App
 
-Smart farming app for Goa's cashew, paddy & coconut farmers.
-Built with **Expo SDK 51 + React Native 0.74 + Supabase + Claude AI**.
 
-## 🚀 Quick Start
 
+# 🌱 AgroGROW
+**The Complete Agricultural Intelligence & Commerce Ecosystem**
+
+AgroGROW is a highly sophisticated, full-stack mobile application designed to transform farmers from "price takers" into "market strategists." It bridges the gap between precision farming, B2C e-commerce, peer-to-peer (P2P) networking, and government assistance.
+
+![React Native](https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Expo](https://img.shields.io/badge/Expo-1B1F23?style=for-the-badge&logo=expo&logoColor=white)
+![Firebase](https://img.shields.io/badge/Firebase-039BE5?style=for-the-badge&logo=Firebase&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
+![TensorFlow](https://img.shields.io/badge/TensorFlow-FF6F00?style=for-the-badge&logo=tensorflow&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)
+
+---
+
+## 🚀 Key Features
+
+* **Unified Agro Market & Local OLX**
+  * **Agro Store (B2C):** Purchase official agricultural inputs (seeds, fertilizers, tools) seamlessly.
+  * **Local OLX (P2P):** A community marketplace allowing farmers to list, upload photos, and sell crops, livestock, or machinery directly to others.
+* **AI Market Arbitrage & Price Prediction**
+  * Analyzes historical pricing, seasonality, and weather using **LSTM Neural Networks**.
+  * Calculates real-time geographical arbitrage by factoring in logistics, spoilage, and distant Mandi prices to maximize farmer profit.
+* **Government Schemes Portal**
+  * An offline-capable eligibility engine that matches farmers with state and federal subsidies based on land size, crop type, and demographics.
+* **Smart Order Tracking**
+  * Dynamic, real-time order tracking with a premium Glassmorphic UI from "Placed" to "Delivered".
+* **Command Center Dashboard**
+  * Custom drawer navigation featuring live environmental data, soil analytics, and access to the Goa Agri Forum.
+
+---
+
+## 🏗️ System Architecture & Tech Stack
+
+AgroGROW utilizes a modern hybrid client-server architecture with specialized microservices.
+
+### Frontend (Mobile App)
+* **Framework:** React Native via Expo
+* **Routing:** Expo Router (File-based routing)
+* **State Management:** React Context API + AsyncStorage
+* **UI/UX:** Custom Glassmorphism, `expo-linear-gradient`, `lucide-react-native`
+
+### Backend Databases (Hybrid Approach)
+* **Firebase Firestore:** NoSQL document store for official B2C store inventory and cart management.
+* **Supabase (PostgreSQL):** Relational database managing user profiles and OLX listings. Secured via strict Row Level Security (RLS).
+* **Supabase Storage:** Public buckets for P2P image hosting (`expo-file-system` & `expo-image-picker`).
+
+### Microservices & AI
+* **Schemes API:** Node.js + Express backend (hosted on Render) for the subsidy eligibility engine.
+* **Arbitrage Engine:** Python, FastAPI, and Uvicorn.
+* **Machine Learning:** TensorFlow (LSTM) ingesting live data from the AGMARKNET API (`api.data.gov.in`).
+
+---
+
+## 🛠️ Installation & Setup
+
+### Prerequisites
+* Node.js & npm
+* Expo CLI
+* Firebase Project
+* Supabase Project
+* Python 3.9+ (for the Arbitrage Engine)
+
+### 1. Clone the Repository
 ```bash
-# 1. Install dependencies
+git clone [https://github.com/yourusername/AgroGROW.git](https://github.com/yourusername/AgroGROW.git)
+cd AgroGROW
+2. Install Dependencies
+Bash
 npm install
+3. Environment Variables
+Create a .env file in the root directory and add your API keys:
 
-# 2. Start on Android emulator
-npx expo start --android backup backup
+Code snippet
+# Supabase Configuration
+EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
-# 3. Start on iOS simulator  
-npx expo start --ios
+# Node.js Schemes API (Local or Render URL)
+EXPO_PUBLIC_SCHEMES_API=http://your_server_ip:3000
+4. Supabase Database Configuration
+Before running the app, ensure your Supabase project is configured correctly:
 
-# 4. Start on physical device (scan QR with Expo Go)
+Storage Bucket: Create a public bucket named olx-images. Add INSERT and SELECT policies for anon and authenticated roles.
+
+Tables: Create the farmer_listings and farmers tables.
+
+Row Level Security (RLS): * Add an INSERT policy (true) to allow posting ads.
+
+Add a SELECT policy (true) to allow reading ads.
+
+Primary Keys: Ensure the id column in your tables is set to type uuid with the default value gen_random_uuid().
+
+5. Run the Application
+Bash
+# Start the Expo bundler
 npx expo start
-```
+Scan the QR code with the Expo Go app on your physical device (ensure your phone and computer are on the same Wi-Fi network).
 
-## 📱 Screens
+🧠 AI Model Deployment (Optional)
+To run the local arbitrage engine:
 
-| Screen | Route | Description |
-|--------|-------|-------------|
-| Splash | `/` | Animated logo entrance |
-| Onboard | `/(auth)/onboard` | App intro with features |
-| Register | `/(auth)/register` | 3-step sign up |
-| Login | `/(auth)/login` | Phone + password |
-| Home | `/(tabs)/home` | Weather, AI tip, forecast |
-| Community | `/(tabs)/community` | Posts + AI crop diagnosis |
-| AgroBot | `/(tabs)/chatbot` | Claude AI farming chatbot |
-| Marketplace | `/(tabs)/market` | Products with cart |
-| Profile | `/(tabs)/profile` | Settings, API key, stats |
-| Pest Alerts | `/pest` | Weather-based risk |
-| Soil Advisor | `/soil` | AI soil analysis |
-| Irrigation | `/irrigation` | Smart watering AI |
-| Calendar | `/calendar` | Monthly crop tasks |
-| Alerts | `/alerts` | Disease & weather alerts |
-| Cart | `/cart` | Shopping cart + checkout |
+Bash
+cd arbitrage-engine
+pip install -r requirements.txt
+uvicorn main:app --reload
+🛡️ Security & Privacy
+API Keys: Hidden via environment variables.
 
-## 🔑 Environment Setup
-
-### Anthropic API Key (for AI features)
-1. Go to `console.anthropic.com` → API Keys
-2. Create a key starting with `sk-ant-...`  
-3. In the app: **Profile → AI API Key** → paste your key
-
-### Supabase (for multi-user data sync)
-Run this SQL once in your Supabase SQL Editor:
-
-```sql
-create table if not exists farmers (
-  phone text primary key,
-  name text, taluka text, crops text[], farm_size float,
-  soil text, lat float, lng float, loc_name text, lang text,
-  joined timestamptz default now()
-);
-
-create table if not exists community_posts (
-  id text primary key, phone text, author text, loc text,
-  txt text, cat text, crop text, likes int default 0,
-  sic int default 0, diag jsonb, comms jsonb default '[]'::jsonb,
-  created_at timestamptz default now()
-);
-
-alter table farmers enable row level security;
-alter table community_posts enable row level security;
-create policy "public read" on farmers for select using (true);
-create policy "public insert" on farmers for insert with check (true);
-create policy "public update" on farmers for update using (true);
-create policy "public read" on community_posts for select using (true);
-create policy "public insert" on community_posts for insert with check (true);
-create policy "public update" on community_posts for update using (true);
-```
-
-## 🎨 Design System
-
-- **Fonts**: Nunito (all weights) + Playfair Display (headings)
-- **Colors**: Green palette (`#0d3b22` → `#6dc993`) + semantic colors
-- **Animations**: Spring physics, fade-in on mount, scale on press, skeleton loaders
-- **Components**: `FadeIn`, `PressScale`, `Toast`, `Skeleton`, `Pill`, `Card`
-
-## 📦 Key Dependencies
-
-```
-expo ~51.0.0
-react-native 0.74.1
-@supabase/supabase-js ^2.39.0
-expo-router ~3.5.0
-expo-linear-gradient ~13.0.0
-expo-haptics ~13.0.0
-expo-location ~17.0.0
-react-native-reanimated ~3.10.0
-@expo-google-fonts/nunito
-@expo-google-fonts/playfair-display
-```
-
-## 🏗️ Architecture
-
-```
-app/                    ← Expo Router file-based routing
-├── _layout.jsx         ← Root (fonts, providers)
-├── index.jsx           ← Animated splash
-├── (auth)/             ← Auth flow (no bottom nav)
-├── (tabs)/             ← Main app (with bottom nav)
-└── *.jsx               ← Sub-screens (pest, soil, etc.)
-
-src/
-├── theme.js            ← Design tokens
-├── store/AppContext.js ← Global state (React Context)
-├── utils/store.js      ← AsyncStorage + Supabase
-├── components/UI.js    ← Shared animated components
-└── data/staticData.js  ← Products, pests, soil data
-```
+Database Access: Locked down using PostgreSQL Row Level Security (RLS). User inserts are handled via .upsert() to prevent primary key constraint crashes.
