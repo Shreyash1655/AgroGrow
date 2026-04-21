@@ -1,6 +1,3 @@
-
-
-
 # 🌱 AgroGROW
 **The Complete Agricultural Intelligence & Commerce Ecosystem**
 
@@ -57,8 +54,8 @@ AgroGROW utilizes a modern hybrid client-server architecture with specialized mi
 ## 🛠️ Installation & Setup
 
 ### Prerequisites
-* Node.js & npm
-* Expo CLI
+* [Node.js & npm](https://nodejs.org/)
+* [Expo CLI](https://docs.expo.dev/get-started/installation/)
 * Firebase Project
 * Supabase Project
 * Python 3.9+ (for the Arbitrage Engine)
@@ -67,46 +64,61 @@ AgroGROW utilizes a modern hybrid client-server architecture with specialized mi
 ```bash
 git clone [https://github.com/yourusername/AgroGROW.git](https://github.com/yourusername/AgroGROW.git)
 cd AgroGROW
-2. Install Dependencies
-Bash
-npm install
-3. Environment Variables
-Create a .env file in the root directory and add your API keys:
+```
 
-Code snippet
+### 2. Install Dependencies
+```bash
+npm install
+```
+
+### 3. Environment Variables
+Create a `.env` file in the root directory and add your API keys:
+
+```env
 # Supabase Configuration
 EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 # Node.js Schemes API (Local or Render URL)
 EXPO_PUBLIC_SCHEMES_API=http://your_server_ip:3000
-4. Supabase Database Configuration
+```
+
+### 4. Supabase Database Configuration
 Before running the app, ensure your Supabase project is configured correctly:
 
-Storage Bucket: Create a public bucket named olx-images. Add INSERT and SELECT policies for anon and authenticated roles.
+* **Storage Bucket:** Create a public bucket named `olx-images`. Add `INSERT` and `SELECT` policies for `anon` and `authenticated` roles.
+* **Tables:** Create the `farmer_listings` and `farmers` tables.
+* **Row Level Security (RLS):** * Add an `INSERT` policy (`true`) to allow posting ads.
+  * Add a `SELECT` policy (`true`) to allow reading ads.
+* **Primary Keys:** Ensure the `id` column in your tables is set to type `uuid` with the default value `gen_random_uuid()`.
 
-Tables: Create the farmer_listings and farmers tables.
-
-Row Level Security (RLS): * Add an INSERT policy (true) to allow posting ads.
-
-Add a SELECT policy (true) to allow reading ads.
-
-Primary Keys: Ensure the id column in your tables is set to type uuid with the default value gen_random_uuid().
-
-5. Run the Application
-Bash
+### 5. Run the Application
+```bash
 # Start the Expo bundler
 npx expo start
-Scan the QR code with the Expo Go app on your physical device (ensure your phone and computer are on the same Wi-Fi network).
+```
+*Scan the QR code with the Expo Go app on your physical device (ensure your phone and computer are on the same Wi-Fi network).*
 
-🧠 AI Model Deployment (Optional)
+---
+
+## 🧠 AI Model Deployment (Optional)
 To run the local arbitrage engine:
 
-Bash
+```bash
 cd arbitrage-engine
 pip install -r requirements.txt
 uvicorn main:app --reload
-🛡️ Security & Privacy
-API Keys: Hidden via environment variables.
+```
 
-Database Access: Locked down using PostgreSQL Row Level Security (RLS). User inserts are handled via .upsert() to prevent primary key constraint crashes.
+---
+
+## 🛡️ Security & Privacy
+* **API Keys:** Hidden securely via environment variables.
+* **Database Access:** Locked down using PostgreSQL Row Level Security (RLS). User inserts are handled via `.upsert()` to prevent primary key constraint crashes.
+
+---
+
+## 📥 Download & Test
+Want to try it out immediately? You can download the latest compiled Android APK directly from Expo:
+
+[**Download AgroGROW APK**](https://expo.dev/accounts/shreyash1655/projects/agrogrow/builds/d597f96d-a52c-4d8f-9978-819595f5a901)
